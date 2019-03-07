@@ -16,6 +16,52 @@ import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
 
+def makeDoeOptDes(fact, outfile, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False):
+    """ Full DoE script """
+    # To Do: full factorial
+    
+    factors = []
+    fnames = []
+    npos = 0
+    nfact = 0
+    for pos in sorted(fact):
+        name = fact[pos]['component']+str(pos)
+        if len(fact[pos]['levels']) > 1:
+            nfact += 1
+            # Currently only working with categorical
+ #            if fact[pos]['component'] != 'gene' and '-' not in fact[pos]['levels']:
+#                varType = 'Discrete Numeric'
+#                theLevels = [ x for x in range(1, len(fact[pos]['levels'])+1 ) ]
+#                factors.append( theLevels ) 
+#                fnames.append(name)
+#            else:
+            # varType = 'Categorical'
+            theLevels = [ '"L{}"'.format(x) for x in range(1, len(fact[pos]['levels'])+1 ) ]
+            factors.append(set(theLevels))
+            fnames.append(name)
+        if fact[pos]['positional'] is not None:
+            npos += 1
+    if npos >  1:
+        # Total possible arrangements in orthogonal latin squares
+        # varType = 'Categorical'
+        theLevels = ['"L{}"'.format(x) for x in range(1, npos*(npos-1)+1)]
+        factors.append( set( theLevels ) )
+        fnames.append('pos')
+        nfact += 1
+    if np.product( [len(x) for x in factors] ) < size:
+        raise Exception('Library size is too large!')
+    initGrid(factors)
+    M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch')
+    M1 = MapDesign2(factors, M)
+    X = mapFactors2( M, factors )
+    df = pd.DataFrame(M1, columns=fnames)
+    pows = CatPower(X , factors, RMSE=RMSE, alpha=alpha)
+    rpvs = RPV(X)
+    diagnostics = {'J': J, 'pow': pows, 'rpv': rpvs, 'X': X, 
+                   'M': M, 'out': outfile, 'factors': factors,
+                   'M1': M1, 'df': df, 'names': fnames}
+    return factors, fnames, diagnostics
+
 
 def Deff(X):
     # D-efficiency
