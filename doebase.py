@@ -13,6 +13,7 @@ Created on Tue Nov 27 16:01:46 2018
 @description: Basic routines common to several doe scripts.
 """
 import pandas as pd
+import numpy as np
 
 def read_excel(e, s=1):
     """ Reads a DoE sheet """
