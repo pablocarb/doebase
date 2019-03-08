@@ -51,7 +51,8 @@ def makeDoeOptDes(fact, outfile, size, seed=None, starts=1040, makeFullFactorial
     if np.product( [len(x) for x in factors] ) < size:
         raise Exception('Library size is too large!')
     initGrid(factors)
-    M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch')
+    seed = np.random.randint(1000000,size=1) 
+    M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
     M1 = MapDesign2(factors, M)
     X = mapFactors2( M, factors )
     df = pd.DataFrame(M1, columns=fnames)
@@ -59,7 +60,7 @@ def makeDoeOptDes(fact, outfile, size, seed=None, starts=1040, makeFullFactorial
     rpvs = RPV(X)
     diagnostics = {'J': J, 'pow': pows, 'rpv': rpvs, 'X': X, 
                    'M': M, 'out': outfile, 'factors': factors,
-                   'M1': M1, 'df': df, 'names': fnames}
+                   'M1': M1, 'df': df, 'names': fnames, 'seed': seed}
     return factors, fnames, diagnostics
 
 
@@ -98,9 +99,11 @@ def VarAdd(X,xj):
     # Variance of adding/removing one experiment
     return np.dot( np.dot( np.transpose(xj) , np.linalg.inv( np.dot( np.transpose( X ), X) ) ), xj )
 
-def randExp( factors, n ):
+def randExp( factors, n, seed=None ):
     # Generate n random experiments
     V = None
+    if seed is not None:
+        np.random.seed( seed )
     for levels in factors:
         vnew = np.random.randint(0, len(levels), n)
         if V is None:
@@ -388,12 +391,12 @@ def DetMax( factors, n, m, it=1000, th=99.5, k=1 ):
 
 
 
-def CoordExch1( factors, n, mode='cordexch', verb=True, obj=Dopt ): # Deff2
+def CoordExch1( factors, n, mode='cordexch', verb=True, obj=Dopt, seed=None ): # Deff2
     # Start with an already sub-optimized design by DetMax
     # (it does not make too mauch difference)
     print('Init design')
  #   M = DetMax2( factors, n, 100 )
-    M = randExp( factors, n )
+    M = randExp( factors, n, seed )
     # No optimization (useful for debugging)
     if mode == 'random':
         print('Random')
@@ -443,11 +446,11 @@ def CoordExch1( factors, n, mode='cordexch', verb=True, obj=Dopt ): # Deff2
 
 
 
-def CoordExch( factors, n, mode='cordexch', runs=10, verb=True ):
+def CoordExch( factors, n, mode='cordexch', runs=10, verb=True, seed=None ):
     M = None
     J = 0
     for i in np.arange( runs ):
-        Mn, Jn = CoordExch1(factors,n,mode=mode, verb=verb)   
+        Mn, Jn = CoordExch1(factors,n,mode=mode, verb=verb, seed=seed)   
         if Jn > J:
             M = Mn
             J = Jn
