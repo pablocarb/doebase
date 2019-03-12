@@ -15,9 +15,12 @@ Created on Tue Nov 27 16:01:46 2018
 import pandas as pd
 import numpy as np
 
-def read_excel(e, s=1):
+def read_excel(e, s=1, doedf=None):
     """ Reads a DoE sheet """
-    df = pd.read_excel(e)
+    if e is None:
+        df = doedf
+    else:
+        df = pd.read_excel(e)
     fact = {}
     partinfo = {}
     offset = 1

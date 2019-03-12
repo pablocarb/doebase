@@ -16,7 +16,7 @@ import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
 
-def makeDoeOptDes(fact, outfile, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False):
+def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False):
     """ Full DoE script """
     # To Do: full factorial
     
@@ -59,7 +59,7 @@ def makeDoeOptDes(fact, outfile, size, seed=None, starts=1040, makeFullFactorial
     pows = CatPower(X , factors, RMSE=RMSE, alpha=alpha)
     rpvs = RPV(X)
     diagnostics = {'J': J, 'pow': pows, 'rpv': rpvs, 'X': X, 
-                   'M': M, 'out': outfile, 'factors': factors,
+                   'M': M, 'factors': factors,
                    'M1': M1, 'df': df, 'names': fnames, 'seed': seed}
     return factors, fnames, diagnostics
 
@@ -391,39 +391,46 @@ def DetMax( factors, n, m, it=1000, th=99.5, k=1 ):
 
 
 
-def CoordExch1( factors, n, mode='cordexch', verb=True, obj=Dopt, seed=None ): # Deff2
+def CoordExch1( factors, n, mode='cordexch', verb=False, obj=Dopt, seed=None ): # Deff2
     # Start with an already sub-optimized design by DetMax
     # (it does not make too mauch difference)
-    print('Init design')
+    if verb:
+        print('Init design')
  #   M = DetMax2( factors, n, 100 )
     M = randExp( factors, n, seed )
     # No optimization (useful for debugging)
     if mode == 'random':
-        print('Random')
+        if verb:
+            print('Random')
         eff =  Deff2(M, factors)
         return M, eff
     elif mode == 'detmax':
-        print('DetMax')
+        if verb:
+            print('DetMax')
         M = DetMax2( factors, n, 100 )
         eff =  Deff2(M, factors)
         return M, eff      
-    print('Start Coord Exchange Optimization')
+    if verb:
+        print('Start Coord Exchange Optimization')
     # D-Efficiency of the initial design
     J = 0
     Jn = Dopt2(M, factors)
     q = M.shape[0]
     while J < Jn:
-        print(J,Jn)
+        if verb:
+            print(J,Jn) 
         J = Jn
         X = mapFactors2( M, factors ) 
         # Calcualte delta of removing an experiment
-        print('Computing variances')
+        if verb:
+            print('Computing variances')
         sub = []
         for i in np.arange(X.shape[0]):
             sub.append( VarAdd(X, X[i,:]) )
         dList = np.argsort( sub )
 #        for i in np.arange( M.shape[0] ):
-        print('Start exchanging',q,'rows')
+        if verb:
+            print('Start exchanging',q,'rows')
         for i in dList[0:q]:
             for j in np.arange( M.shape[1] ):
                 Js = []
@@ -434,7 +441,8 @@ def CoordExch1( factors, n, mode='cordexch', verb=True, obj=Dopt, seed=None ): #
                         Jk = 0
                     Js.append( Jk )
                 M[i,j] = np.argmax( Js )
-        print('End mapping')
+        if verb:
+            print('End mapping')
         Jn = Dopt2( M, factors )
         if q > 0.2*M.shape[0]:
             q = q-1
@@ -837,10 +845,11 @@ if __name__ == '__main__':
        {'Red', 'Green', 'Blue' ,'prom1', 'prom2', 'prom3', 'prom4'}, 
        {'prom1', 'prom2', 'prom3', 'prom4'} ]
     
-    factors,DD, EE, Deff = JMPRead('/mnt/SBC1/data/OptimalDesign/data/test3.csv')
+    factors,DD, EE, Deff, labels = JMPRead('/mnt/SBC1/data/OptimalDesign/data/test3.csv')
     
     
     M , J = CoordExch(factors, n, runs=10)
+
    # M = GenAlg2(factors, n=46, it=10, nPop=5)
     
     #X = DetMax(factors, n, m, it=1000, k=2)
