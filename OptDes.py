@@ -16,6 +16,7 @@ import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
 
+
 def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False):
     """ Full DoE script """
     # To Do: full factorial
@@ -41,6 +42,7 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
             fnames.append(name)
         if fact[pos]['positional'] is not None:
             npos += 1
+
     if npos >  1:
         # Total possible arrangements in orthogonal latin squares
         # varType = 'Categorical'
@@ -48,11 +50,23 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
         factors.append( set( theLevels ) )
         fnames.append('pos')
         nfact += 1
-    if np.product( [len(x) for x in factors] ) < size:
-        raise Exception('Library size is too large!')
+    if seed is not None:
+        np.random.seed( seed )
+    else:
+        seed = np.random.randint(100000, size=1)
+        np.random.seed( seed )
     initGrid(factors)
-    seed = np.random.randint(1000000,size=1) 
-    M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
+    if np.product( [len(x) for x in factors] ) < size:
+        # raise Exception('Library size is too large!')
+        # TO DO: make a full factorial
+        M = fullFactorial( factors )
+        J = Deff2(M, factors)
+        size = M.shape[0]
+        ix = np.arange(size)
+        np.random.shuffle( ix )
+        M = M[ix,:]
+    else:
+        M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
     M1 = MapDesign2(factors, M)
     X = mapFactors2( M, factors )
     df = pd.DataFrame(M1, columns=fnames)
@@ -99,11 +113,9 @@ def VarAdd(X,xj):
     # Variance of adding/removing one experiment
     return np.dot( np.dot( np.transpose(xj) , np.linalg.inv( np.dot( np.transpose( X ), X) ) ), xj )
 
-def randExp( factors, n, seed=None ):
+def randExp( factors, n ):
     # Generate n random experiments
     V = None
-    if seed is not None:
-        np.random.seed( seed )
     for levels in factors:
         vnew = np.random.randint(0, len(levels), n)
         if V is None:
@@ -397,7 +409,7 @@ def CoordExch1( factors, n, mode='cordexch', verb=False, obj=Dopt, seed=None ): 
     if verb:
         print('Init design')
  #   M = DetMax2( factors, n, 100 )
-    M = randExp( factors, n, seed )
+    M = randExp( factors, n )
     # No optimization (useful for debugging)
     if mode == 'random':
         if verb:
