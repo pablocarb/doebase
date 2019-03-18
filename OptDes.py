@@ -15,9 +15,50 @@ import numpy as np
 import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
+from doebase.doebase import doeTemplate, promoterList, plasmidList, read_excel
+
+def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
+             outfile=None, random=False ):
+
+    plasmids = plasmidList(nplasmids)
+    promoters = promoterList(npromoters)
+    
+    tree = []
+    genes = {}
+    for i in np.arange(steps):
+        rid = "r%0d" % (i,)
+        tree.append(rid)
+        genes[rid] = []
+        for j in np.arange(variants):
+            gid = "g%0d_%0d" % (i,j)
+            genes[rid].append(gid)
+            
+    doe = doeTemplate( tree, plasmids, promoters, genes, positional )
+    if outfile is not None:
+        doe.to_excel( outfile, index=False )
+        fact, partinfo = read_excel( outfile )
+    else:
+        fact, partinfo = read_excel( None, doedf=doe )
+    try:
+        seed = np.random.randint(10000)
+        starts = 1
+        RMSE = 10
+        alpha = 0.05
+        factors, fnames, diagnostics = makeDoeOptDes(fact, size=libsize, 
+                                                     seed=seed, starts=starts,
+                                                     RMSE= RMSE, alpha=alpha,
+                                                     random=random )
+    except:
+        raise Exception("No solution")
+    diagnostics['steps'] = steps
+    diagnostics['variants'] = variants
+    diagnostics['npromoters'] = npromoters
+    diagnostics['nplasmids'] = nplasmids
+    diagnostics['libsize'] = libsize
+    return diagnostics
 
 
-def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False):
+def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False, random=False):
     """ Full DoE script """
     # To Do: full factorial
     
@@ -56,17 +97,22 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
         seed = np.random.randint(100000, size=1)
         np.random.seed( seed )
     initGrid(factors)
-    if np.product( [len(x) for x in factors] ) < size:
-        # raise Exception('Library size is too large!')
-        # TO DO: make a full factorial
-        M = fullFactorial( factors )
+    if random:
+        # If set, perform a random design instead of a D-optimal design
+        M = randExp( factors, n=int(size) )
         J = Deff2(M, factors)
-        size = M.shape[0]
-        ix = np.arange(size)
-        np.random.shuffle( ix )
-        M = M[ix,:]
     else:
-        M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
+        if np.product( [len(x) for x in factors] ) < size:
+            # raise Exception('Library size is too large!')
+            # TO DO: make a full factorial
+            M = fullFactorial( factors )
+            J = Deff2(M, factors)
+            size = M.shape[0]
+            ix = np.arange(size)
+            np.random.shuffle( ix )
+            M = M[ix,:]
+        else:
+            M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
     M1 = MapDesign2(factors, M)
     X = mapFactors2( M, factors )
     df = pd.DataFrame(M1, columns=fnames)
