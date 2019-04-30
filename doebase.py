@@ -40,9 +40,15 @@ class spec:
             ['g1_1', 'g1_2', ... ]
     """
     def __init__(self, positional, component, levels):
-        self.positional = None
-        self.component = 'origin'
+        self.positional = positional
+        self.component = component
         self.levels = levels
+        
+    def __str__(self):
+        return(str(self.__dict__))
+
+    def __repr__(self):
+        return(str(self.__dict__))
         
 
 def read_excel(e, s=1, doedf=None):
