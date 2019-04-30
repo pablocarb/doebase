@@ -15,8 +15,55 @@ Created on Tue Nov 27 16:01:46 2018
 import pandas as pd
 import numpy as np
 
+
+class spec:
+    """ DoE specificactions of the genetic part 
+    
+    Attributes
+    ----------
+    positional : float
+        1.0 or None depending if part can be rearranged
+    component: str
+        origin | resistance | promoter | gene
+    levels : list
+        levels of the genetic part (see Note) 
+
+    Note
+    ---- 
+    Origin levels (plasmid copy numbers)                   
+            ['pl1', 'pl2', ... ] 
+    Resistance levels
+            ['res1', ... ] 
+    Promoter levels (and blanks)
+            ['prom1', 'prom2', ..., '-', '-', ... ] 
+    Gene levels (gene variants)
+            ['g1_1', 'g1_2', ... ]
+    """
+    def __init__(self, positional, component, levels):
+        self.positional = None
+        self.component = 'origin'
+        self.levels = levels
+        
+
 def read_excel(e, s=1, doedf=None):
-    """ Reads a DoE sheet """
+    """ Reads a DoE sheet and returns the information objects. 
+    
+        Input
+        -----
+        e : str
+            Excel file
+        s : str
+            sheet name
+        doedf : pandas.DataFrame 
+            if e is None, the info is passed as df
+        Return
+        ------
+        dict
+            An object of class spec for each numeric position
+        dict 
+            Additional info
+                        
+    """
     if e is None:
         df = doedf
     else:
@@ -41,26 +88,30 @@ def read_excel(e, s=1, doedf=None):
             continue
         if part is None:
             if factor in fact:
-                i = len(fact[factor]['levels'])+1
+                i = len(fact[factor].levels)+1
             else:
                 i = 1
             part = 'P'+str(factor)+'_'+str(i)
 
         if factor not in fact:
-            fact[factor] = {
-                    'positional': positional,
-                    'component': component,
-                    'levels': []
-            }
+            fact[factor] = spec(positional, component, [])
         if part == 'blank':
             part = None
-        fact[factor]['levels'].append(part)
+        fact[factor].levels.append(part)
     return fact, partinfo
 
 
 def uniformData(tree, promoters, positional):
     """ Uniformize the format of the data in order
-    to allow polymorphic inputs """
+    to allow polymorphic inputs. 
+    Input:
+        - tree: list of step labels
+        - promoters: single list for all steps or dict (no change)
+        - positional: boolean for all steps or list (no change)
+    Returns:
+        - promoters: dictionary of promoters allowed at each step
+        - positional: list of steps that allow shuffling
+    """
     if type(positional) is bool:
         if positional:
             positional = tree
@@ -93,16 +144,16 @@ def doeTemplate(tree,
                 promoters=['prom1', 'prom2', None, None],
                 genes = {},
                 positional=True):
-    """ Generates the DoE sheet:
+    """ Generates the DoE specification sheet:
         - tree: ordered list of reaction steps.
         - origins: list of origins of replication (plasmid copy number)
         - promoters: 
-            - list of promoters (Nones at the end for ratio of no-promoters)
+            - list of promoters (Nones at the end for ratio of no-promoters);
             - dictionary with list of promoters for each step
         - genes: dictionary containing the genes for each step
         - positional: gene permutation
             - Boolean: for all genes;
-            - List of steps for permutation
+            - list of steps for permutation
     """    
     promoters, positional = uniformData( tree, promoters, positional )
     

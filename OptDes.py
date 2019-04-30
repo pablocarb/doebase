@@ -15,11 +15,27 @@ import numpy as np
 import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
-#from doebase.doebase import doeTemplate, promoterList, plasmidList, read_excel
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
 def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
              outfile=None, random=False ):
+    """ Generate and evaluate an optimal design of a pathway circuit following the template: 
+        1. Vector: 1 to nplasmids
+        2. Promoter: 1 to npromoters
+        3. Gene: 1 to variants
+        4. Terminator + Promoter: None to npromoters, prob(None)= 0.5
+        5. Gene: 1 to variants
+        ...
+        Parameters:
+        - steps: number of steps in the pathway
+        - variants: number of variants in each step (currently fixed)
+        - npromoters: number of promoters in each step
+        - nplasmids: number of plasmids in each step
+        - libsize: desired library size
+        - positional: gene rearrangement is allowed
+        - outfile: output the doe into outfile if given
+        - random: random DoE instead of optimal
+    """
 
     plasmids = plasmidList(nplasmids)
     promoters = promoterList(npromoters)
@@ -60,16 +76,19 @@ def evaldes( steps, variants, npromoters, nplasmids, libsize, positional,
 
 
 def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False, random=False):
-    """ Full DoE script """
+    """ Full DoE script: 
+        - fact: a dictionary contained the desired design    
+    """
     # To Do: full factorial
-    
+    import pdb
+    pdb.set_trace()
     factors = []
     fnames = []
     npos = 0
     nfact = 0
     for pos in sorted(fact):
-        name = fact[pos]['component']+str(pos)
-        if len(fact[pos]['levels']) > 1:
+        name = fact[pos].component+str(pos)
+        if len(fact[pos].levels) > 1:
             nfact += 1
             # Currently only working with categorical
  #            if fact[pos]['component'] != 'gene' and '-' not in fact[pos]['levels']:
@@ -79,10 +98,10 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
 #                fnames.append(name)
 #            else:
             # varType = 'Categorical'
-            theLevels = [ '"L{}"'.format(x) for x in range(1, len(fact[pos]['levels'])+1 ) ]
+            theLevels = [ '"L{}"'.format(x) for x in range(1, len(fact[pos].levels)+1 ) ]
             factors.append(set(theLevels))
             fnames.append(name)
-        if fact[pos]['positional'] is not None:
+        if fact[pos].positional is not None:
             npos += 1
 
     if npos >  1:
