@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import itertools, re 
 from scipy.stats import f as FDist, ncf as ncFDist
-from doebase.doebase import doeTemplate, promoterList, plasmidList, read_excel
+#from doebase.doebase import doeTemplate, promoterList, plasmidList, read_excel
+from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
 def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
              outfile=None, random=False ):
