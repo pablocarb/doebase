@@ -17,6 +17,10 @@ import itertools, re
 from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
+def doeRequest(f):
+    import pdb
+    pdb.set_trace()
+
 def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
              outfile=None, random=False ):
     """ Generate and evaluate an optimal design of a pathway circuit following the template: 
@@ -80,8 +84,6 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
         - fact: a dictionary contained the desired design    
     """
     # To Do: full factorial
-    import pdb
-    pdb.set_trace()
     factors = []
     fnames = []
     npos = 0
