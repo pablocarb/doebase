@@ -17,9 +17,12 @@ import itertools, re
 from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
-def doeRequest(f):
-    import pdb
-    pdb.set_trace()
+def doeRequest(f, size):
+    doe = pd.read_excel( f )
+    fact, partinfo = read_excel( None, doedf=doe )
+    seed = np.random.randint(10000)
+    diagnostics = callDoE(fact, size, seed=seed)
+    return diagnostics
 
 def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
              outfile=None, random=False ):
@@ -55,29 +58,35 @@ def evaldes( steps, variants, npromoters, nplasmids, libsize, positional,
             genes[rid].append(gid)
             
     doe = doeTemplate( tree, plasmids, promoters, genes, positional )
+    
     if outfile is not None:
         doe.to_excel( outfile, index=False )
         fact, partinfo = read_excel( outfile )
     else:
         fact, partinfo = read_excel( None, doedf=doe )
+    seed = np.random.randint(10000)
+    diagnostics = callDoE(fact, size=libsize, seed=seed)
+    diagnostics['steps'] = steps
+    diagnostics['variants'] = variants
+    diagnostics['npromoters'] = npromoters
+    diagnostics['nplasmids'] = nplasmids
+    return diagnostics
+
+
+def callDoE(fact, size, seed, starts=1, RMSE=10, 
+            alpha=0.05, random=False ):
     try:
-        seed = np.random.randint(10000)
         starts = 1
         RMSE = 10
         alpha = 0.05
-        factors, fnames, diagnostics = makeDoeOptDes(fact, size=libsize, 
+        factors, fnames, diagnostics = makeDoeOptDes(fact, size=size, 
                                                      seed=seed, starts=starts,
                                                      RMSE= RMSE, alpha=alpha,
                                                      random=random )
     except:
         raise Exception("No solution")
-    diagnostics['steps'] = steps
-    diagnostics['variants'] = variants
-    diagnostics['npromoters'] = npromoters
-    diagnostics['nplasmids'] = nplasmids
-    diagnostics['libsize'] = libsize
+    diagnostics['libsize'] = size
     return diagnostics
-
 
 def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False, random=False):
     """ Full DoE script: 
