@@ -25,7 +25,6 @@ def doeRequest(f, ftype, size):
         doe = pd.read_excel( f )
     else:
         doe = pd.read_table( f )
-    doe = pd.read_excel( f )
     fact, partinfo = read_excel( None, doedf=doe )
     seed = np.random.randint(10000)
     diagnostics = callDoE(fact, size, seed=seed)
