@@ -18,6 +18,7 @@ from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
 def doeRequest(f, ftype, size):
+    print('Received:',ftype)
     if ftype == 'csv':
         doe = pd.read_csv( f )
     elif ftype == 'xlsx' or ftype == 'xls':
