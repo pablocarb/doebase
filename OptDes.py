@@ -17,7 +17,13 @@ import itertools, re
 from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
-def doeRequest(f, size):
+def doeRequest(f, ftype, size):
+    if ftype == 'csv':
+        doe = pd.read_csv( f )
+    elif ftype == 'xlsx' or ftype == 'xls':
+        doe = pd.read_excel( f )
+    else:
+        doe = pd.read_table( f )
     doe = pd.read_excel( f )
     fact, partinfo = read_excel( None, doedf=doe )
     seed = np.random.randint(10000)
