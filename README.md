@@ -12,3 +12,8 @@ Basic call (see `evaldes` for details):
 ```python
 factors, fnames, diagnostics = makeDoeOptDes(fact, size=libsize, seed=seed, starts=starts, RMSE= RMSE, alpha=alpha, random=random )
 ```
+
+*To do:*
+
+* Specifications for the DoE sheet.
+* Connexion to synbiohub (use pysbol library).
