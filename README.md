@@ -18,11 +18,11 @@ factors, fnames, diagnostics = makeDoeOptDes(fact, size, seed=None, starts=1040,
 * `fact`: a dictionary of sortable keys (in principle, the position in the construct) containing `doebase.spec` objects with the following attributes:
 
   *  `positional`: `float`
-          `1.0` or `None` depending if the genetic part can be rearranged
+      `1.0` or `None` depending if the genetic part can be rearranged
 
   *  `component`: `str`
-            origin | resistance | promoter | gene
-        
+        origin | resistance | promoter | gene
+
   *  `levels`: `list`
             levels of the genetic part (see Note)
 
