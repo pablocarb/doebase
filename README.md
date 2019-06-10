@@ -23,21 +23,29 @@ factors, fnames, diagnostics = makeDoeOptDes(fact, size, seed=None, starts=1040,
 
   *  `component`: `str`
 
-        origin | resistance | promoter | gene
+      origin | resistance | promoter | gene
 
   *  `levels`: `list`
-            levels of the genetic part (see Note)
+
+      levels of the genetic part (see Note)
 
 ### Note
 
   *  Origin levels (plasmid copy numbers)                   
-            ['pl1', 'pl2', ... ]
+
+        ['pl1', 'pl2', ... ]
+
   *  Resistance levels
-            ['res1', ... ]
+
+        ['res1', ... ]
+
   *  Promoter levels (and blanks)
-            ['prom1', 'prom2', ..., '-', '-', ... ]
+
+        ['prom1', 'prom2', ..., '-', '-', ... ]
+
   *  Gene levels (gene variants)
-            ['g1_1', 'g1_2', ... ]
+
+        ['g1_1', 'g1_2', ... ]
 
 * `size`: size of the library.
 * `seed`: random seed.
