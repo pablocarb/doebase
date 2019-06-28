@@ -124,16 +124,24 @@ def getDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
     for n in names:
         x = int(re.findall('\d+',n)[0])
         doemap[x] = n
+    cons = []
     for i in np.arange(0,M.shape[0]):
-        for j in np.arange(1,int(max(doe['DoE position']))):
+        z = 0
+        construct = []
+        for j in np.arange(1,int(max(doe['DoE position']))+1):
             if j in doemap:
                 ### TO DO: find parts and genes and define the construct
-                import pdb
-                pdb.set_trace()
-    return doe, diagnostics
+                lev = M[j-1,z]
+                z += 1
+            else:
+                lev = 0
+            construct.append( fact[j].levels[lev])
+        cons.append(construct)
+    cons = np.array(cons)
+    return doe, diagnostics, cons
 
     
-def getSBOL(pfile,gfile,M,names):
+def getSBOL(pfile,gfile,cons):
     namespace = "http://synbiochem.co.uk"
     sbol.setHomespace( namespace )
     doc = sbol.Document()
@@ -145,18 +153,34 @@ def getSBOL(pfile,gfile,M,names):
     doc = defineParts(doc, genes)
     print('Genes defined')
     print(doc)
-    for row in np.arange(0,M.shape[0]):
-        import pdb
-        pdb.set_trace()
+    for row in np.arange(0,cons.shape[0]):
+        plasmid = []
+        for col in np.arange(0,cons.shape[1]):
+            part = cons[row,col]
+            if part == '-':
+                continue
+            component = doc.componentDefinitions[part]
+            plasmid.append(part)
+        # Create a new empty device named `my_device`
+        plid = "plasmid%02d" % (row+1,)
+        my_device = doc.componentDefinitions.create(plid)
+
+        # Assemble the new device from the promoter, rbs, cds, and terminator from above.
+        my_device.assemblePrimaryStructure(plasmid)
+        
+        # Set the role of the device with the Sequence Ontology term `gene`
+        my_device.roles = sbol.SO_PLASMID
+        
+    return(doc)
     
     
-    
-def example():
-    pwd = os.path.dirname(os.path.realpath(__file__))
-    pfile = os.path.join(pwd,'RefParts.csv')
-    gfile = os.path.join(pwd,'GeneParts.csv')
-    M, names = getDoe(pfile,gfile,32)
-    getSBOL(pfile,gfile,M,names)
+def example(pfile='RefParts.csv', gfile='GeneParts.csv', ofile='out.sbol'):
+#    pwd = os.path.dirname(os.path.realpath(__file__))
+#    pfile = os.path.join(pwd,'RefParts.csv')
+#    gfile = os.path.join(pwd,'GeneParts.csv')
+    doe, diagnostics, cons = getDoe(pfile,gfile,32)
+    doc = getSBOL(pfile,gfile,cons)
+    doc.write(ofile)
     
 # Set default namespace
 if __name__ == '__main__':    
