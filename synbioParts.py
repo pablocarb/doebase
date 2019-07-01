@@ -56,8 +56,9 @@ def defineParts(doc,parts):
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry """
 
-    sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_GENE, 
-               'origin': sbol.SO_PLASMID, 'resistance': sbol.SO_GENE}
+    sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
+               'origin': ['http://identifiers.org/so/SO:0000296',sbol.SO_PLASMID], 
+               'resistance': sbol.SO_CDS, 'terminator': sbol.SO_TERMINATOR}
 
     for i in parts.index:
         name = parts.loc[i,'Name']
@@ -66,20 +67,22 @@ def defineParts(doc,parts):
         if ptype in sboldef:
             if ptype == 'promoter':
                 promoter = sbol.ComponentDefinition(name)
-                promoter.roles = sbol.SO_PROMOTER
+                promoter.roles = sboldef[ptype]
                 promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
                 doc.addComponentDefinition(promoter)
             elif ptype == 'origin':
                 origin = sbol.ComponentDefinition(name)
-                origin.roles = sbol.SO_PLASMID
+                origin.roles = sboldef[ptype]
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 doc.addComponentDefinition(origin)
             elif ptype == 'gene' or ptype == 'resistance':
                 origin = sbol.ComponentDefinition(name)
-                origin.roles = sbol.SO_GENE
+                origin.roles = sboldef[ptype]
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 doc.addComponentDefinition(origin)
-                
+    terminator = sbol.ComponentDefinition('Ter')
+    terminator.roles = sboldef['terminator']
+    doc.addComponentDefinition(terminator)       
     return doc
 
 def defineTemplate(pfile='RefParts.csv', gfile='GeneParts.csv'):
@@ -153,6 +156,8 @@ def getSBOL(pfile,gfile,cons):
     doc = defineParts(doc, genes)
     print('Genes defined')
     print(doc)
+    import pdb
+    pdb.set_trace()
     for row in np.arange(0,cons.shape[0]):
         plasmid = []
         for col in np.arange(0,cons.shape[1]):
