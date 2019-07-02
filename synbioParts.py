@@ -40,6 +40,21 @@ def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.
     diagnostics, cons = getTheDoe(pfile,gfile,libsize)
     doc = getSBOL(pfile,gfile,cons)
     doc.write(ofile)
+    
+def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32):
+    """
+    Perform the DoE and generate the SBOL file from the 
+    parts and genes files
+    - RefParts.csv: Name, Type, Part
+    - GeneParts.csv: Name, Type, Part, Step
+        Type: origin, resistance, promoter, gene 
+        Step: Enzyme step in the pathway (eventually could be implemented 
+        for the other genetic parts)
+    """
+    diagnostics, cons = getTheDoe(pfile,gfile,libsize)
+    doc = getSBOL(pfile,gfile,cons)
+    diagnostics['sbol'] = str(doc)
+    return diagnostics
             
 def _ReadParts(infile='RefParts.csv',registry='https://synbiohub.org'):
     """ A tabular csv file containing columns: Name, Type, Part is read 
