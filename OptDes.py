@@ -17,7 +17,62 @@ import itertools, re
 from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
+def defineTemplate(pfile='RefParts.csv', gfile='GeneParts.csv'):
+    """ Generates the DoE template format from a list of parts and genes
+    - RefParts.csv: Name, Type, Part
+    - GeneParts.csv: Name, Type, Part, Step
+        Type: origin, resistance, promoter, gene 
+        Step: Enzyme step in the pathway (eventually could be implemented 
+        for the other genetic parts)
+    """
+    parts = pd.read_csv(pfile)
+    genes = pd.read_csv(gfile)
+    prom = []
+    ori = []
+    for i in parts.index:
+        ptype = parts.loc[i,'Type']
+        name = parts.loc[i,'Name']
+        if ptype == 'promoter':
+            prom.append(name)
+        elif ptype == 'origin':
+            ori.append(name)
+    for i in range(0,len(prom)):
+        prom.append(None)
+    tree = []
+    gdict = {}
+    for i in genes.index:
+        name = genes.loc[i,'Name']
+        step = "gene%00d" % (int(genes.loc[i,'Step']),)
+        if step not in tree:
+            tree.append(step)   
+        if step not in gdict:
+            gdict[step] = []
+        gdict[step].append(name)
+    doe = doeTemplate(tree, origins=ori, promoters=prom, genes=gdict, positional=False)
+    return doe, parts, genes
+
+
+def mainDoe(doe,size):
+    """ Main DoE procedure
+    """
+    fact, partinfo = read_excel( None, doedf=doe )
+    seed = np.random.randint(10000)
+    diagnostics = callDoE(fact, size, seed=seed)
+    return diagnostics
+
+def getDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
+    """ DoE request from parts and genes files (see defineTemplate)
+    """
+    doe,parts,genes = defineTemplate(pfile=pfile, gfile=gfile)
+    diagnostics = mainDoe(doe,size)
+    return diagnostics
+
 def doeRequest(f, ftype, size):
+    """ DoE request from the template format
+        f: filename
+        ftype: csv or xlsx
+        size: lib size
+    """
     print('Received:',ftype)
     if ftype == 'csv':
         doe = pd.read_csv( f )
@@ -25,9 +80,7 @@ def doeRequest(f, ftype, size):
         doe = pd.read_excel( f )
     else:
         doe = pd.read_table( f )
-    fact, partinfo = read_excel( None, doedf=doe )
-    seed = np.random.randint(10000)
-    diagnostics = callDoE(fact, size, seed=seed)
+    diagnostics = mainDoe(doe,size)
     return diagnostics
 
 def evaldes( steps, variants, npromoters, nplasmids, libsize, positional, 
@@ -156,7 +209,7 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
     pows = CatPower(X , factors, RMSE=RMSE, alpha=alpha)
     rpvs = RPV(X)
     diagnostics = {'J': J, 'pow': pows, 'rpv': rpvs, 'X': X, 
-                   'M': M, 'factors': factors,
+                   'M': M, 'factors': factors, 'fact': fact,
                    'M1': M1, 'df': df, 'names': fnames, 'seed': seed}
     return factors, fnames, diagnostics
 

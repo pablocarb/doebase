@@ -11,6 +11,13 @@ Created on Fri May 31 13:38:19 2019
 
 @author:  Pablo Carbonell, SYNBIOCHEM
 @description: Routines to interface with synbio repositories 
+    - parts: list of pointers to SynBiohub, we assume that each part 
+    (origin, resistance, promoter) has been already registered in the part registry;
+    - pathway: list of enzymes referred by either: 
+        - SynbioHub identifier: useful if the part has been previously registered or
+        for gene variants (RBS library or mutants)
+        - UniProt identifier: a new empty container for this part is created in SynBioHub, 
+        which will be later filled by the DNA design step
 """
 
 import os
@@ -18,20 +25,23 @@ import re
 import sbol
 import numpy as np
 import pandas as pd
-from .doebase import doeTemplate, promoterList, plasmidList, read_excel
-from .OptDes import callDoE
+from .OptDes import getDoe
 
-def combine(parts, pathway):
-    """ This routine combines together the parts and the coding regions of the pathway.
-    - parts: list of pointers to SynBiohub, we assume that each part 
-    (origin, resistance, promoter) has been already registered in the part registry;
-    - pathway: list of enzymes referred by either: 
-        - SynbioHub identifier: useful if the part has been previously registered or
-        for gene variants (RBS library or mutants)
-        - UniProt identifier: a new empty container for this part is created in SynBioHub, 
-        which will be later filled by the DNA design step """
-        
-def ReadParts(infile='RefParts.csv',registry='https://synbiohub.org'):
+def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.sbol'):
+    """
+    Perform the DoE and generate the SBOL file from the 
+    parts and genes files
+    - RefParts.csv: Name, Type, Part
+    - GeneParts.csv: Name, Type, Part, Step
+        Type: origin, resistance, promoter, gene 
+        Step: Enzyme step in the pathway (eventually could be implemented 
+        for the other genetic parts)
+    """
+    diagnostics, cons = getTheDoe(pfile,gfile,libsize)
+    doc = getSBOL(pfile,gfile,cons)
+    doc.write(ofile)
+            
+def _ReadParts(infile='RefParts.csv',registry='https://synbiohub.org'):
     """ A tabular csv file containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry """
@@ -51,13 +61,13 @@ def ReadParts(infile='RefParts.csv',registry='https://synbiohub.org'):
             repo.pull(part, doc)
     return doc
 
-def defineParts(doc,parts):
+def _defineParts(doc,parts):
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry """
 
     sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
-               'origin': ['http://identifiers.org/so/SO:0000296',sbol.SO_PLASMID], 
+               'origin': 'http://identifiers.org/so/SO:0000296', 
                'resistance': sbol.SO_CDS, 'terminator': sbol.SO_TERMINATOR}
 
     for i in parts.index:
@@ -70,6 +80,12 @@ def defineParts(doc,parts):
                 promoter.roles = sboldef[ptype]
                 promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
                 doc.addComponentDefinition(promoter)
+                try:
+                    terminator = sbol.ComponentDefinition('Ter')
+                    terminator.roles = sboldef['terminator']
+                    doc.addComponentDefinition(terminator)       
+                except:
+                    continue
             elif ptype == 'origin':
                 origin = sbol.ComponentDefinition(name)
                 origin.roles = sboldef[ptype]
@@ -80,49 +96,14 @@ def defineParts(doc,parts):
                 origin.roles = sboldef[ptype]
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 doc.addComponentDefinition(origin)
-    terminator = sbol.ComponentDefinition('Ter')
-    terminator.roles = sboldef['terminator']
-    doc.addComponentDefinition(terminator)       
     return doc
 
-def defineTemplate(pfile='RefParts.csv', gfile='GeneParts.csv'):
-    parts = pd.read_csv(pfile)
-    genes = pd.read_csv(gfile)
-    prom = []
-    ori = []
-    for i in parts.index:
-        ptype = parts.loc[i,'Type']
-        name = parts.loc[i,'Name']
-        if ptype == 'promoter':
-            prom.append(name)
-        elif ptype == 'origin':
-            ori.append(name)
-    for i in range(0,len(prom)):
-        prom.append(None)
-    tree = []
-    gdict = {}
-    for i in genes.index:
-        name = genes.loc[i,'Name']
-        step = "gene%00d" % (int(genes.loc[i,'Step']),)
-        tree.append(step)
-        if step not in gdict:
-            gdict[step] = []
-        gdict[step].append(name)
-    doe = doeTemplate(tree, origins=ori, promoters=prom, genes=gdict, positional=False)
-    return doe, parts, genes
 
-def getConstruct(doe,diagnostics,parts,genes):
-    import pdb
-    pdb.set_trace()
-
-
-def getDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
-    doe,parts,genes = defineTemplate(pfile=pfile, gfile=gfile)
-    fact, partinfo = read_excel( None, doedf=doe )
-    seed = np.random.randint(10000)
-    diagnostics = callDoE(fact, size, seed=seed)
+def getTheDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
+    diagnostics = getDoe(pfile,gfile,size)
     names = diagnostics['names']
     M = diagnostics['M']
+    fact = diagnostics['fact']
     doemap = {}
     for n in names:
         x = int(re.findall('\d+',n)[0])
@@ -131,17 +112,17 @@ def getDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
     for i in np.arange(0,M.shape[0]):
         z = 0
         construct = []
-        for j in np.arange(1,int(max(doe['DoE position']))+1):
+        for j in np.arange(1,int(max(fact))+1):
             if j in doemap:
                 ### TO DO: find parts and genes and define the construct
-                lev = M[j-1,z]
+                lev = M[i,z]
                 z += 1
             else:
                 lev = 0
             construct.append( fact[j].levels[lev])
         cons.append(construct)
     cons = np.array(cons)
-    return doe, diagnostics, cons
+    return diagnostics, cons
 
     
 def getSBOL(pfile,gfile,cons):
@@ -149,15 +130,13 @@ def getSBOL(pfile,gfile,cons):
     sbol.setHomespace( namespace )
     doc = sbol.Document()
     parts = pd.read_csv(pfile)
-    doc = defineParts(doc, parts)
+    doc = _defineParts(doc, parts)
     print('Parts defined')
     print(doc)
     genes = pd.read_csv(gfile)
-    doc = defineParts(doc, genes)
+    doc = _defineParts(doc, genes)
     print('Genes defined')
     print(doc)
-    import pdb
-    pdb.set_trace()
     for row in np.arange(0,cons.shape[0]):
         plasmid = []
         for col in np.arange(0,cons.shape[1]):
@@ -165,7 +144,10 @@ def getSBOL(pfile,gfile,cons):
             if part == '-':
                 continue
             component = doc.componentDefinitions[part]
+            if sbol.SO_PROMOTER in component.roles and col > 2:
+                plasmid.append('Ter')
             plasmid.append(part)
+        plasmid.append('Ter')
         # Create a new empty device named `my_device`
         plid = "plasmid%02d" % (row+1,)
         my_device = doc.componentDefinitions.create(plid)
@@ -178,29 +160,4 @@ def getSBOL(pfile,gfile,cons):
         
     return(doc)
     
-    
-def example(pfile='RefParts.csv', gfile='GeneParts.csv', ofile='out.sbol'):
-#    pwd = os.path.dirname(os.path.realpath(__file__))
-#    pfile = os.path.join(pwd,'RefParts.csv')
-#    gfile = os.path.join(pwd,'GeneParts.csv')
-    doe, diagnostics, cons = getDoe(pfile,gfile,32)
-    doc = getSBOL(pfile,gfile,cons)
-    doc.write(ofile)
-    
-# Set default namespace
-if __name__ == '__main__':    
-    namespace = "http://synbiochem.co.uk"
-    sbol.setHomespace( namespace )
-    doc = sbol.Document()
-    pfile = 'RefParts.csv'
-    gfile = 'GeneParts.csv'
-    parts = pd.read_csv(pfile)
-    doc = defineParts(doc, parts)
-    print('Parts defined')
-    print(doc)
-    genes = pd.read_csv(gfile)
-    doc = defineParts(doc, genes)
-    print('Genes defined')
-    print(doc)
-    doe = defineTemplate(parts,genes)
     
