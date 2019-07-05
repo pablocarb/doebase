@@ -51,17 +51,19 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32):
         Step: Enzyme step in the pathway (eventually could be implemented 
         for the other genetic parts)
     """
-    diagnostics, cons = getTheDoe(pfile,gfile,libsize)
-    doc = getSBOL(pfile,gfile,cons)
-    diagnostics['sbol'] = str(doc)
+    parts = pd.read_csv(pfile)
+    genes = pd.read_csv(gfile)
+    diagnostics, cons = getTheDoe(parts,genes,libsize)
+    doc = getSBOL(parts,genes,cons)
+    diagnostics['sbol'] = doc.writeString()
     return diagnostics
             
-def _ReadParts(infile='RefParts.csv',registry='https://synbiohub.org'):
+def _ReadParts(parts,registry='https://synbiohub.org'):
     """ A tabular csv file containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry """
 
-    tf = pd.read_csv(infile)
+    tf = parts
     col = []
     doc = sbol.Document()
     for i in tf.index:
@@ -114,8 +116,8 @@ def _defineParts(doc,parts):
     return doc
 
 
-def getTheDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
-    diagnostics = getDoe(pfile,gfile,size)
+def getTheDoe(parts, genes,size=32):
+    diagnostics = getDoe(parts,genes,size)
     names = diagnostics['names']
     M = diagnostics['M']
     fact = diagnostics['fact']
@@ -140,15 +142,13 @@ def getTheDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
     return diagnostics, cons
 
     
-def getSBOL(pfile,gfile,cons):
+def getSBOL(parts,genes,cons):
     namespace = "http://synbiochem.co.uk"
     sbol.setHomespace( namespace )
     doc = sbol.Document()
-    parts = pd.read_csv(pfile)
     doc = _defineParts(doc, parts)
     print('Parts defined')
     print(doc)
-    genes = pd.read_csv(gfile)
     doc = _defineParts(doc, genes)
     print('Genes defined')
     print(doc)

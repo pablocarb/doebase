@@ -17,7 +17,7 @@ import itertools, re
 from scipy.stats import f as FDist, ncf as ncFDist
 from .doebase import doeTemplate, promoterList, plasmidList, read_excel
 
-def defineTemplate(pfile='RefParts.csv', gfile='GeneParts.csv'):
+def defineTemplate(parts, genes):
     """ Generates the DoE template format from a list of parts and genes
     - RefParts.csv: Name, Type, Part
     - GeneParts.csv: Name, Type, Part, Step
@@ -25,8 +25,6 @@ def defineTemplate(pfile='RefParts.csv', gfile='GeneParts.csv'):
         Step: Enzyme step in the pathway (eventually could be implemented 
         for the other genetic parts)
     """
-    parts = pd.read_csv(pfile)
-    genes = pd.read_csv(gfile)
     prom = []
     ori = []
     for i in parts.index:
@@ -60,10 +58,10 @@ def mainDoe(doe,size):
     diagnostics = callDoE(fact, size, seed=seed)
     return diagnostics
 
-def getDoe(pfile='RefParts.csv', gfile='GeneParts.csv',size=32):
+def getDoe(parts, genes,size=32):
     """ DoE request from parts and genes files (see defineTemplate)
     """
-    doe,parts,genes = defineTemplate(pfile=pfile, gfile=gfile)
+    doe,parts,genes = defineTemplate(parts, genes)
     diagnostics = mainDoe(doe,size)
     return diagnostics
 
