@@ -64,3 +64,7 @@ factors, fnames, diagnostics = makeDoeOptDes(fact, size, seed=None, starts=1040,
 * `RMSE`, `alpha`: parameters of the DoE algorithm.
 * `verbose`
 * `random`: make a random rather than an optimal design.
+
+## Authors
+
+* **Pablo Carbonell** 
