@@ -1,4 +1,4 @@
-# doebase
+# OptBioDes: an optimal design of experiments (DoE) base package for synthetic biology
 
 Basic Optimal DoE (Design of Experiments) routines for metabolic pathway design.
 
