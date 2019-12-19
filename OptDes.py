@@ -132,16 +132,16 @@ def evaldes( steps, variants, npromoters, nplasmids, libsize, positional,
 
 def callDoE(fact, size, seed, starts=1, RMSE=10, 
             alpha=0.05, random=False ):
+    starts = 1
+    RMSE = 10
+    alpha = 0.05
     try:
-        starts = 1
-        RMSE = 10
-        alpha = 0.05
         factors, fnames, diagnostics = makeDoeOptDes(fact, size=size, 
                                                      seed=seed, starts=starts,
                                                      RMSE= RMSE, alpha=alpha,
                                                      random=random )
     except:
-        raise Exception("No solution")
+        raise
     diagnostics['libsize'] = size
     return diagnostics
 
@@ -201,6 +201,8 @@ def makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, R
             M = M[ix,:]
         else:
             M, J = CoordExch(factors, n=int(size), runs=2, verb=verbose, mode='coordexch', seed=seed)
+            if M is None:
+                raise Exception('No solution')
     M1 = MapDesign2(factors, M)
     X = mapFactors2( M, factors )
     df = pd.DataFrame(M1, columns=fnames)
