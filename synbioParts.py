@@ -23,6 +23,8 @@ Created on Fri May 31 13:38:19 2019
 import os
 import re
 import sbol
+import requests
+import time
 import numpy as np
 import pandas as pd
 from .OptDes import getDoe
@@ -41,7 +43,8 @@ def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.
     doc = getSBOL(pfile,gfile,cons)
     doc.write(ofile)
     
-def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32):
+def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32,
+               getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
     """
     Perform the DoE and generate the SBOL file from the 
     parts and genes files
@@ -54,7 +57,7 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32):
     parts = pd.read_csv(pfile)
     genes = pd.read_csv(gfile)
     diagnostics, cons = getTheDoe(parts,genes,libsize)
-    doc = getSBOL(parts,genes,cons)
+    doc = getSBOL(parts,genes,cons,getSequences,backtranslate,codontable)
     diagnostics['sbol'] = doc.writeString()
     return diagnostics
             
@@ -78,7 +81,109 @@ def _ReadParts(parts,registry='https://synbiohub.org'):
             repo.pull(part, doc)
     return doc
 
-def _defineParts(doc,parts):
+def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+    """ Parts is a dataframe containing columns: Name, Type, Part is read 
+    and each part in added to the SBOL doc.
+    Part type should is overriden by the ontology definition in the registry.
+    If sequences should be provided, select if backtranslate and provide codon table:
+    (Eecoli.cut, Eyeast.cut, etc) See https://www.ebi.ac.uk/Tools/st/emboss_backtranseq/ """
+
+    sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
+               'origin': 'http://identifiers.org/so/SO:0000296', 
+               'resistance': sbol.SO_CDS, 'terminator': sbol.SO_TERMINATOR}
+    registry='https://synbiohub.org'
+    repo = sbol.PartShop(registry)
+    for i in parts.index:
+        name = parts.loc[i,'Name']
+        ptype = parts.loc[i,'Type']
+        part = parts.loc[i,'Part']
+        if ptype in sboldef:
+            if ptype == 'promoter':
+                if getSequences:
+                    try:
+                        repo.pull(part,doc)
+                        promoter = doc.getComponentDefinition(part)
+                        promoter.name = name
+                    except:
+                        promoter = sbol.ComponentDefinition(name)
+                else:
+                    promoter = sbol.ComponentDefinition(name)                    
+                promoter.roles = sboldef[ptype]
+                promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
+                try:
+                    promoter = doc.getComponentDefinition(part)
+                except:
+                    doc.addComponentDefinition(promoter)
+                try:
+                    terminator = sbol.ComponentDefinition('Ter')
+                    terminator.roles = sboldef['terminator']
+                    terminator.name = 'Ter'
+                    doc.addComponentDefinition(terminator)       
+                except:
+                    continue
+            elif ptype == 'origin':
+                if getSequences:
+                    try:
+                        repo.pull(part,doc)
+                        origin = doc.getComponentDefinition(part)
+                    except:
+                        origin = sbol.ComponentDefinition(name)
+                else:
+                        origin = sbol.ComponentDefinition(name)                    
+                origin.roles = sboldef[ptype]
+                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.name = name
+                try:
+                    origin = doc.getComponentDefinition(part)
+                except:
+                    doc.addComponentDefinition(origin)
+            elif ptype == 'gene' or ptype == 'resistance':
+                if getSequences:
+                    # try to get the part from the repository
+                    try:
+                        repo.pull(part,doc)
+                        origin = doc.getComponentDefinition(part)
+                    except:
+                        # if failed, retrieve the amino acid sequence from Uniprot and backtranslate using EMBOSS web service
+                        try:
+                            query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
+                            response = requests.get(query)
+                            if backtranslate:
+                                resp = requests.post( 'https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/run', 
+                                                     {'email': '@'.join(['pablo.carbonell','manchester.ac.uk']), 'title':'OpBioDes SBOL', 
+                                                      'codontable': codontable, 'sequence': response.text} )
+                                jobid = resp.text
+                                status = 'RUNNING'
+                                while status == 'RUNNING':
+                                    resp1  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/status/'+jobid)
+                                    status = resp1.text
+                                    time.sleep(0.1)
+                                if status == 'FINISHED':
+                                    resp2  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/result/'+jobid+'/out')
+                                    seq = ''.join( resp2.text.split('\n')[1:] )
+                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
+                                else:
+                                    seq = ''.join( response.text.split('\n')[1:] )                                   
+                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                            else:
+                                seq = ''.join( response.text.split('\n')[1:] )
+                                seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                            origin = sbol.ComponentDefinition(name)
+                            origin.sequence = seqdef
+                        except:
+                            origin = sbol.ComponentDefinition(name)
+                else:
+                        origin = sbol.ComponentDefinition(name)
+                origin.roles = sboldef[ptype]
+                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.name = name
+                try:
+                    origin = doc.getComponentDefinition(part)
+                except:
+                    doc.addComponentDefinition(origin)
+    return doc
+
+def _definePartsOld(doc,parts):
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry """
@@ -142,14 +247,19 @@ def getTheDoe(parts, genes,size=32):
     return diagnostics, cons
 
     
-def getSBOL(parts,genes,cons):
+def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+    dic = {}
+    for p in parts.index:
+        dic[parts.loc[p,'Name']] = parts.loc[p,'Part']
+    for g in genes.index:
+        dic[genes.loc[g,'Name']] = genes.loc[g,'Part']
     namespace = "http://synbiochem.co.uk"
     sbol.setHomespace( namespace )
     doc = sbol.Document()
     doc = _defineParts(doc, parts)
     print('Parts defined')
     print(doc)
-    doc = _defineParts(doc, genes)
+    doc = _defineParts( doc, genes, getSequences, backtranslate, codontable )
     print('Genes defined')
     print(doc)
     for row in np.arange(0,cons.shape[0]):
@@ -158,7 +268,11 @@ def getSBOL(parts,genes,cons):
             part = cons[row,col]
             if part == '-':
                 continue
-            component = doc.componentDefinitions[part]
+            try:
+                component = doc.componentDefinitions[part]
+            except:
+                part = dic[part]
+                component = doc.componentDefinitions[part]
             if sbol.SO_PROMOTER in component.roles and col > 2:
                 plasmid.append('Ter')
             plasmid.append(part)
