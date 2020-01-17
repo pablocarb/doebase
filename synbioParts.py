@@ -111,7 +111,8 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 promoter.roles = sboldef[ptype]
                 promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
                 try:
-                    promoter = doc.getComponentDefinition(part)
+                    if part not in doc.componentDefinitions:
+                        promoter = doc.getComponentDefinition(part)
                 except:
                     doc.addComponentDefinition(promoter)
                 try:
@@ -134,12 +135,13 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 origin.name = name
                 try:
-                    origin = doc.getComponentDefinition(part)
+                    if part not in doc.componentDefinitions:
+                        origin = doc.getComponentDefinition(part)
                 except:
                     doc.addComponentDefinition(origin)
             elif ptype == 'gene' or ptype == 'resistance':
                 if getSequences:
-                    # try to get the part from the repository
+                    # try to get the part from the repository by its URI, if given 
                     try:
                         repo.pull(part,doc)
                         origin = doc.getComponentDefinition(part)
@@ -178,7 +180,9 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 origin.name = name
                 try:
-                    origin = doc.getComponentDefinition(part)
+                    # Check if already exists, using either the identifier or the URI
+                    if part not in doc.componentDefinitions:
+                        origin = doc.getComponentDefinition(part)
                 except:
                     doc.addComponentDefinition(origin)
     return doc
