@@ -237,7 +237,10 @@ def SE(X):
 
 def RPV(X):
     # Relative prediction variance
-    XXi = np.linalg.inv( np.dot( np.transpose( X ), X ) )
+    try:
+        XXi = np.linalg.inv( np.dot( np.transpose( X ), X ) )
+    except:
+        return [np.nan for i in np.arange(X.shape[0])]
     return [np.dot( np.dot( np.transpose( X[i,:] ), XXi), X[i,:]) for i in np.arange(X.shape[0])]
 
 def Contrib(X):
@@ -603,8 +606,10 @@ def CoordExch1( factors, n, mode='cordexch', verb=False, obj=Dopt, seed=None ): 
 
 
 def CoordExch( factors, n, mode='cordexch', runs=10, verb=True, seed=None ):
-    M = None
-    J = 0
+    """ Repeat n runs of the coordinate exchange algorithm.
+        Start with a random design """
+    M = randExp( factors, n )
+    J = Deff2( M, factors )
     for i in np.arange( runs ):
         Mn, Jn = CoordExch1(factors,n,mode=mode, verb=verb, seed=seed)   
         if Jn > J:
@@ -740,7 +745,10 @@ def Linc(XX_inv, beta_A, i, n_i, varis, nvar, RMSE=1):
          if j == i:
             L[:,p_j:p_j+n_j] = np.eye(n_j)
     left = np.transpose( np.dot(L,beta_A) )
-    mid = np.linalg.inv( np.dot( np.dot(L, XX_inv),np.transpose(L) ) )/(n_i*RMSE**2)
+    try:
+        mid = np.linalg.inv( np.dot( np.dot(L, XX_inv),np.transpose(L) ) )/(n_i*RMSE**2)
+    except:
+        mid = 0
     right = np.dot(L,beta_A) 
     lambda_i = np.dot( left, np.dot(mid, right) )
     return lambda_i
@@ -769,7 +777,13 @@ def CatPower(X, factors, RMSE=1, alpha=0.05):
         vec.append( np.tile( [1,-1], int( np.ceil( n_i/2+1) ) )[0:n_i] )
     beta_A = np.concatenate( vec )
     XX = np.dot( np.transpose(X), X) 
-    XX_inv = np.linalg.inv(XX)
+    try:
+        XX_inv = np.linalg.inv(XX)
+    except:
+        pows = []
+        for i in np.arange(1,nvar):
+            pows.append(np.nan)
+        return pows
     # skip intercept for the time being. To do: add power analysis for continuous parameters
     pows = []
     for i in np.arange(1,nvar):
