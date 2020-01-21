@@ -49,10 +49,17 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32,
     Perform the DoE and generate the SBOL file from the 
     parts and genes files
     - RefParts.csv: Name, Type, Part
-    - GeneParts.csv: Name, Type, Part, Step
-        Type: origin, resistance, promoter, gene 
+        Name: part name
+        Type: origin, resistance, promoter, gene
+        Part: SynBioHub URI
+    - GeneParts.csv: Name, Type, Part, Step, Sequence
+        Name: gene name
+        Type: gene
         Step: Enzyme step in the pathway (eventually could be implemented 
-        for the other genetic parts)
+                                          for the other genetic parts)
+        Part: identifier (UniProt, etc) or SynBioHub URI
+        Sequence: gene sequence (optional: if not given they are retrieved 
+                                 from UniProt or SynBioHub)
     """
     parts = pd.read_csv(pfile)
     genes = pd.read_csv(gfile)
@@ -85,7 +92,8 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry.
-    If sequences should be provided, select if backtranslate and provide codon table:
+    If sequences should be provided in the SBOL doc, check if they are on the parts table
+    or select if backtranslate from UniProt and provide codon table:
     (Eecoli.cut, Eyeast.cut, etc) See https://www.ebi.ac.uk/Tools/st/emboss_backtranseq/ """
 
     sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
@@ -141,41 +149,49 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                     doc.addComponentDefinition(origin)
             elif ptype == 'gene' or ptype == 'resistance':
                 if getSequences:
-                    # try to get the part from the repository by its URI, if given 
-                    try:
-                        repo.pull(part,doc)
-                        origin = doc.getComponentDefinition(part)
-                    except:
-                        # if failed, retrieve the amino acid sequence from Uniprot and backtranslate using EMBOSS web service
-                        try:
-                            query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
-                            response = requests.get(query)
-                            if backtranslate:
-                                resp = requests.post( 'https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/run', 
-                                                     {'email': '@'.join(['pablo.carbonell','manchester.ac.uk']), 'title':'OpBioDes SBOL', 
-                                                      'codontable': codontable, 'sequence': response.text} )
-                                jobid = resp.text
-                                status = 'RUNNING'
-                                while status == 'RUNNING':
-                                    resp1  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/status/'+jobid)
-                                    status = resp1.text
-                                    time.sleep(0.1)
-                                if status == 'FINISHED':
-                                    resp2  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/result/'+jobid+'/out')
-                                    seq = ''.join( resp2.text.split('\n')[1:] )
-                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
-                                else:
-                                    seq = ''.join( response.text.split('\n')[1:] )                                   
-                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
-                            else:
-                                seq = ''.join( response.text.split('\n')[1:] )
-                                seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
-                            origin = sbol.ComponentDefinition(name)
-                            origin.sequence = seqdef
-                        except:
-                            origin = sbol.ComponentDefinition(name)
-                else:
+                    # Get from the Sequence column if given (assume naseq)
+                    if 'Sequence' in parts and not pd.isnan( parts.loc[i,'Sequence'] ):
+                        seq = parts.loc[i,'Sequence']
+                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
                         origin = sbol.ComponentDefinition(name)
+                        origin.sequence = seqdef
+                    else:
+                        # try to get the part from the repository by its URI, if given 
+                        try:
+                            repo.pull(part,doc)
+                            origin = doc.getComponentDefinition(part)
+                        except:
+                            # if failed, retrieve the amino acid sequence from Uniprot and backtranslate using EMBOSS web service
+                            try:
+                                query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
+                                response = requests.get(query)
+                                if backtranslate:
+                                    resp = requests.post( 'https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/run', 
+                                                         {'email': '@'.join(['pablo.carbonell','manchester.ac.uk']), 'title':'OptBioDes SBOL', 
+                                                          'codontable': codontable, 'sequence': response.text} )
+                                    jobid = resp.text
+                                    status = 'RUNNING'
+                                    while status == 'RUNNING':
+                                        resp1  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/status/'+jobid)
+                                        status = resp1.text
+                                        time.sleep(0.1)
+                                    if status == 'FINISHED':
+                                        resp2  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/result/'+jobid+'/out')
+                                        seq = ''.join( resp2.text.split('\n')[1:] )
+                                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
+                                    else:
+                                        seq = ''.join( response.text.split('\n')[1:] )                                   
+                                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                                else:
+                                    seq = ''.join( response.text.split('\n')[1:] )
+                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                                origin = sbol.ComponentDefinition(name)
+                                origin.sequence = seqdef
+                            # If UniProt/EMBOSS was not succesful, leave the sequence empty
+                            except:
+                                origin = sbol.ComponentDefinition(name)
+                else:
+                    origin = sbol.ComponentDefinition(name)
                 origin.roles = sboldef[ptype]
                 origin.setPropertyValue('http://purl.org/dc/terms/description',part)
                 origin.name = name
@@ -252,6 +268,14 @@ def getTheDoe(parts, genes,size=32):
 
     
 def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+    """
+        parts: df with parts (see doeGetSBOL)
+        genes: df with genes (see doeGetSBOL)
+        cons: library of constructs generated by the DoE
+        getSequences: retrieve sequences if not available in the gene list
+        backtranslate: back translate protein sequences if not given
+        codontable: only required for back translation
+    """
     dic = {}
     for p in parts.index:
         dic[parts.loc[p,'Name']] = parts.loc[p,'Part']
