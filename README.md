@@ -6,6 +6,7 @@ Modules:
 
 * `OptDes`: main module of optimal DoE routines.
 * `doebase`: routines to interface the current SynBioChem DoE input sheet template with the `OptDes` module.
+* `synbioParts`: integration of `OptDes` with SBOL and DNA parts repositories.
 
 The DoE specifications can be provided in tabular form (`csv` or `xlsx`) with the following columns:
 
