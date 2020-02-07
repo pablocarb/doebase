@@ -43,8 +43,9 @@ def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.
     doc = getSBOL(pfile,gfile,cons)
     doc.write(ofile)
     
-def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32,
-               getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', 
+               gsbol=None, libsize=32,
+               getSequences=True,backtranslate=True, codontable='Eecoli.cut'):
     """
     Perform the DoE and generate the SBOL file from the 
     parts and genes files
@@ -60,13 +61,43 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32,
         Part: identifier (UniProt, etc) or SynBioHub URI
         Sequence: gene sequence (optional: if not given they are retrieved 
                                  from UniProt or SynBioHub)
+    - Gsbol: SBOL file containing optimised versions of the genes (RBS, etc)
     """
     parts = pd.read_csv(pfile)
     genes = pd.read_csv(gfile)
+    if gsbol is not None and os.path.exists(gsbol):
+       genes = _readGenesSBOL(gsbol, genes)
     diagnostics, cons = getTheDoe(parts,genes,libsize)
     doc = getSBOL(parts,genes,cons,getSequences,backtranslate,codontable)
     diagnostics['sbol'] = doc.writeString()
     return diagnostics
+
+def _readGenesSBOL(gsbol, genes, roles=[sbol.SO_GENE]):
+    """ Create a new gene table containing the genes in the SBOL """
+    partsdoc = sbol.Document()
+    partsdoc.read(gsbol)
+    gdict = {}
+    for i in genes.index:
+         gid = genes.loc[i,'Part']
+         if gid not in gdict:
+             gdict[gid] = []
+         gdict[gid].append( genes.loc[i,:] )
+    ngenes = []
+    for part in partsdoc.componentDefinitions:
+        if len( set(part.roles) & set(roles) ) > 0:
+            dispid = part.displayId
+            disp = dispid.split('_')
+            rbs = disp[-2]
+            cds = '_'.join( disp[0:(len(disp)-2)] )
+            if cds in gdict:
+                for row in gdict[cds]:
+                    row = row.copy()
+                    row.loc['Name'] = dispid
+                    row.loc['Part'] = part.persistentIdentity
+                    ngenes.append( row )
+    ngenes = pd.DataFrame(ngenes, columns=genes.columns).sort_values(by=['Step','Name'])
+    ngenes.index = np.arange(0, ngenes.shape[0])
+    return ngenes
             
 def _ReadParts(parts,registry='https://synbiohub.org'):
     """ A tabular csv file containing columns: Name, Type, Part is read 
@@ -88,19 +119,31 @@ def _ReadParts(parts,registry='https://synbiohub.org'):
             repo.pull(part, doc)
     return doc
 
-def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eecoli.cut',registry='https://synbiohub.org',local=None):
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry.
     If sequences should be provided in the SBOL doc, check if they are on the parts table
     or select if backtranslate from UniProt and provide codon table:
     (Eecoli.cut, Eyeast.cut, etc) See https://www.ebi.ac.uk/Tools/st/emboss_backtranseq/ """
+    
+    local = '/mnt/SBC1/data/ibisba/Genie/sbol_in.xml'
+    locdoc = None
+    if local is not None:
+        locdoc = sbol.Document()
+        locdoc.read(local)
 
     sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
                'origin': 'http://identifiers.org/so/SO:0000296', 
                'resistance': sbol.SO_CDS, 'terminator': sbol.SO_TERMINATOR}
     registry='https://synbiohub.org'
     repo = sbol.PartShop(registry)
+    if locdoc is not None:
+        for com in locdoc.componentDefinitions:
+            if com.name is None:
+                com.name = com.displayId
+        locdoc.copy('http://liverpool.ac.uk',doc)
+        
     for i in parts.index:
         name = parts.loc[i,'Name']
         ptype = parts.loc[i,'Type']
@@ -148,20 +191,32 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 except:
                     doc.addComponentDefinition(origin)
             elif ptype == 'gene' or ptype == 'resistance':
-                if getSequences:
-                    # Get from the Sequence column if given (assume naseq)
-                    if 'Sequence' in parts and not pd.isnan( parts.loc[i,'Sequence'] ):
-                        seq = parts.loc[i,'Sequence']
-                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
-                        origin = sbol.ComponentDefinition(name)
-                        origin.sequence = seqdef
-                    else:
-                        # try to get the part from the repository by its URI, if given 
-                        try:
-                            repo.pull(part,doc)
-                            origin = doc.getComponentDefinition(part)
-                        except:
-                            # if failed, retrieve the amino acid sequence from Uniprot and backtranslate using EMBOSS web service
+                gene = None
+                # Case 1: where the gene is defined in the sbol 
+                if name in doc.componentDefinitions:
+                    gene = doc.componentDefinitions[name]
+                try:
+#                    gene = locdoc.getComponentDefinition(part)
+                    gene = doc.componentDefinitions[name]
+                except:
+                    gene = None
+                if gene is None:
+                # Case 2: where the gene is in the repo
+                    try:
+                        repo.pull(part,doc)
+                        gene = doc.getComponentDefinition(part)
+                    except:
+                        pass
+                # Case 3: where the sequence is retrieved manually    
+                if gene is None: 
+                    gene = sbol.ComponentDefinition(name)
+                    if getSequences:
+                        # Get from the Sequence column if given (assume naseq)
+                        if 'Sequence' in parts and not pd.isnan( parts.loc[i,'Sequence'] ):
+                            seq = parts.loc[i,'Sequence']
+                            seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
+                            gene.sequence = seqdef
+                        else:
                             try:
                                 query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
                                 response = requests.get(query)
@@ -185,23 +240,27 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                                 else:
                                     seq = ''.join( response.text.split('\n')[1:] )
                                     seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
-                                origin = sbol.ComponentDefinition(name)
-                                origin.sequence = seqdef
+                                gene.sequence = seqdef
                             # If UniProt/EMBOSS was not succesful, leave the sequence empty
                             except:
-                                origin = sbol.ComponentDefinition(name)
-                else:
-                    origin = sbol.ComponentDefinition(name)
-                origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
-                origin.name = name
+                                pass
+                gene.roles = sboldef[ptype]
+                gene.setPropertyValue('http://purl.org/dc/terms/description',part)
+                gene.name = name
                 try:
-                    # Check if already exists, using either the identifier or the URI
-                    if part not in doc.componentDefinitions:
-                        origin = doc.getComponentDefinition(part)
+                    doc.addComponentDefinition(gene)
                 except:
-                    doc.addComponentDefinition(origin)
+                    pass
     return doc
+
+def _definePartsSBOL(doc,parts,roles):
+    """ Parts are given as an SBOL collection with the desired roles
+    """
+    partsdoc = sbol.doc()
+    partsdoc.read(parts)
+    for part in partsdoc.componentDefinitions:
+        if len( set(part.roles) & set(roles) ) > 0:
+            doc.addComponentDefinition( part )
 
 def _definePartsOld(doc,parts):
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
@@ -286,35 +345,32 @@ def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Ee
     doc = sbol.Document()
     doc = _defineParts(doc, parts)
     print('Parts defined')
-    print(doc)
     doc = _defineParts( doc, genes, getSequences, backtranslate, codontable )
     print('Genes defined')
-    print(doc)
     for row in np.arange(0,cons.shape[0]):
         plasmid = []
         for col in np.arange(0,cons.shape[1]):
-            part = cons[row,col]
-            if part == '-':
+            name = cons[row,col]
+            if name == '-':
                 continue
             try:
-                component = doc.componentDefinitions[part]
+                component = doc.componentDefinitions[name]
             except:
-                part = dic[part]
-                component = doc.componentDefinitions[part]
+                part = dic[name]
+                component = doc.getComponentDefinition(part)
             if sbol.SO_PROMOTER in component.roles and col > 2:
-                plasmid.append('Ter')
-            plasmid.append(part)
-        plasmid.append('Ter')
+                plasmid.append(doc.componentDefinitions['Ter'])
+            plasmid.append(component)
+        plasmid.append(doc.componentDefinitions['Ter'])
         # Create a new empty device named `my_device`
         plid = "plasmid%02d" % (row+1,)
         my_device = doc.componentDefinitions.create(plid)
-
+        
         # Assemble the new device from the promoter, rbs, cds, and terminator from above.
         my_device.assemblePrimaryStructure(plasmid)
         
         # Set the role of the device with the Sequence Ontology term `gene`
         my_device.roles = sbol.SO_PLASMID
-        
     return(doc)
     
     
