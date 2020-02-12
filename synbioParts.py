@@ -35,7 +35,7 @@ def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.
     parts and genes files
     - RefParts.csv: Name, Type, Part
     - GeneParts.csv: Name, Type, Part, Step
-        Type: origin, resistance, promoter, gene 
+        Type: origin, resistance, promoter, terminator, gene 
         Step: Enzyme step in the pathway (eventually could be implemented 
         for the other genetic parts)
     """
@@ -51,7 +51,7 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv',
     parts and genes files
     - RefParts.csv: Name, Type, Part
         Name: part name
-        Type: origin, resistance, promoter, gene
+        Type: origin, resistance, promoter, terminator, gene
         Part: SynBioHub URI
     - GeneParts.csv: Name, Type, Part, Step, Sequence
         Name: gene name
@@ -68,7 +68,7 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv',
     if gsbol is not None and os.path.exists(gsbol):
        genes = _readGenesSBOL(gsbol, genes)
     diagnostics, cons = getTheDoe(parts,genes,libsize)
-    doc = getSBOL(parts,genes,cons,getSequences,backtranslate,codontable)
+    doc = getSBOL(parts,genes,cons,getSequences,backtranslate,codontable, gsbol)
     diagnostics['sbol'] = doc.writeString()
     return diagnostics
 
@@ -127,7 +127,6 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
     or select if backtranslate from UniProt and provide codon table:
     (Eecoli.cut, Eyeast.cut, etc) See https://www.ebi.ac.uk/Tools/st/emboss_backtranseq/ """
     
-    local = '/mnt/SBC1/data/ibisba/Genie/sbol_in.xml'
     locdoc = None
     if local is not None:
         locdoc = sbol.Document()
@@ -166,13 +165,23 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                         promoter = doc.getComponentDefinition(part)
                 except:
                     doc.addComponentDefinition(promoter)
+            elif ptype == 'terminator':
+                if getSequences:
+                    try:
+                        repo.pull(part,doc)
+                        terminator = doc.getComponentDefinition(part)
+                        terminator.name = name
+                    except:
+                        terminator = sbol.ComponentDefinition(name)
+                else:
+                    terminator = sbol.ComponentDefinition(name)                    
+                terminator.roles = sboldef[ptype]
+                terminator.setPropertyValue('http://purl.org/dc/terms/description',part)
                 try:
-                    terminator = sbol.ComponentDefinition('Ter')
-                    terminator.roles = sboldef['terminator']
-                    terminator.name = 'Ter'
-                    doc.addComponentDefinition(terminator)       
+                    if part not in doc.componentDefinitions:
+                        terminator = doc.getComponentDefinition(part)
                 except:
-                    continue
+                    doc.addComponentDefinition(terminator)
             elif ptype == 'origin':
                 if getSequences:
                     try:
@@ -326,7 +335,7 @@ def getTheDoe(parts, genes,size=32):
     return diagnostics, cons
 
     
-def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Eecoli.cut'):
+def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Eecoli.cut', local=None):
     """
         parts: df with parts (see doeGetSBOL)
         genes: df with genes (see doeGetSBOL)
@@ -345,7 +354,7 @@ def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Ee
     doc = sbol.Document()
     doc = _defineParts(doc, parts)
     print('Parts defined')
-    doc = _defineParts( doc, genes, getSequences, backtranslate, codontable )
+    doc = _defineParts( doc, genes, getSequences, backtranslate, codontable, local=local )
     print('Genes defined')
     for row in np.arange(0,cons.shape[0]):
         plasmid = []
@@ -359,9 +368,15 @@ def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Ee
                 part = dic[name]
                 component = doc.getComponentDefinition(part)
             if sbol.SO_PROMOTER in component.roles and col > 2:
-                plasmid.append(doc.componentDefinitions['Ter'])
+                try:
+                    plasmid.append(doc.componentDefinitions['Ter'])
+                except:
+                    plasmid.append(doc.getComponentDefinition(dic['Ter']))
             plasmid.append(component)
-        plasmid.append(doc.componentDefinitions['Ter'])
+        try:
+            plasmid.append(doc.componentDefinitions['Ter'])
+        except:
+            plasmid.append(doc.getComponentDefinition(dic['Ter']))
         # Create a new empty device named `my_device`
         plid = "plasmid%02d" % (row+1,)
         my_device = doc.componentDefinitions.create(plid)
