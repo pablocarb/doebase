@@ -13,3 +13,14 @@ Created on Tue Nov 27 16:01:46 2018
 
 @author: pablo
 """
+from .OptDes import (
+    makeDoeOptDes,
+    callDoE,
+    evaldes,
+    doeRequest,
+    getDoe,
+    mainDoe
+)
+from .synbioParts import (
+    doeGetSBOL
+)

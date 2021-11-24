@@ -22,12 +22,18 @@ Created on Fri May 31 13:38:19 2019
 
 import os
 import re
-import sbol
+import doebase.sbol as sbol
 import requests
 import time
 import numpy as np
 import pandas as pd
 from .OptDes import getDoe
+from .Args import (
+    DEFAULT_libsize,
+    DEFAULT_get_sequences,
+    DEFAULT_backtranslate,
+    DEFAULT_condon_table,
+)
 
 def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.sbol'):
     """
@@ -43,9 +49,15 @@ def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.
     doc = getSBOL(pfile,gfile,cons)
     doc.write(ofile)
     
-def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', 
-               gsbol=None, libsize=32,
-               getSequences=True,backtranslate=True, codontable='Eecoli.cut'):
+def doeGetSBOL(
+    gfile,
+    pfile='RefParts.csv',
+    gsbol=None,
+    libsize=DEFAULT_libsize,
+    getSequences=DEFAULT_get_sequences,
+    backtranslate=DEFAULT_backtranslate,
+    codontable=DEFAULT_condon_table
+):
     """
     Perform the DoE and generate the SBOL file from the 
     parts and genes files
@@ -66,7 +78,7 @@ def doeGetSBOL(pfile='RefParts.csv', gfile='GeneParts.csv',
     parts = pd.read_csv(pfile)
     genes = pd.read_csv(gfile)
     if gsbol is not None and os.path.exists(gsbol):
-       genes = _readGenesSBOL(gsbol, genes)
+        genes = _readGenesSBOL(gsbol, genes)
     diagnostics, cons = getTheDoe(parts,genes,libsize)
     doc = getSBOL(parts,genes,cons,getSequences,backtranslate,codontable, gsbol)
     diagnostics['sbol'] = doc.writeString()
