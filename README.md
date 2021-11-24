@@ -16,11 +16,15 @@ The DoE specifications can be provided in tabular form (`csv` or `xlsx`) with th
  * `Part number`: identifier linking to the parts repository (`SynBioHub`, 'ICE`, etc.).
 
 
-
+## Installation
+```bash
+conda install -c conda-forge doebase
+```
 
 Basic call from within the library (see `evaldes` for details):
 
 ```python
+from doebase import makeDoeOptDes
 factors, fnames, diagnostics = makeDoeOptDes(fact, size, seed=None, starts=1040, makeFullFactorial=False, RMSE=1, alpha=0.05, verbose=False, random=False)
 ```
 
