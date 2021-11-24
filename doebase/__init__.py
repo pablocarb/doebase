@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 doebase (c) University of Manchester 2018
 
@@ -13,6 +11,7 @@ Created on Tue Nov 27 16:01:46 2018
 
 @author: pablo
 """
+
 from .OptDes import (
     makeDoeOptDes,
     callDoE,
