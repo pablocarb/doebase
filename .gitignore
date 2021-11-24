@@ -2,9 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+!doebase/sbol/lib/*/*.pyd
+
 
 # C extensions
 *.so
+!doebase/sbol/lib/*/*.so
 
 # Distribution / packaging
 .Python
@@ -15,6 +18,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!doebase/sbol/lib
 lib64/
 parts/
 sdist/
@@ -103,4 +107,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+cicd-toolkit
 .DS_Store
