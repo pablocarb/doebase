@@ -5,8 +5,8 @@ from .synbioParts import doeGetSBOL
 
 def entry_point():
     parser = build_args_parser(
-        prog = 'partsgenie_client',
-        description='Requests a input (SBOL) file to a PartsGenie server'
+        prog = 'doebase',
+        description='An optimal design of experiments (DoE) base package for synthetic biology'
     )
     args = parser.parse_args()
 
