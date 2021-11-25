@@ -1,0 +1,50 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Tests
+
+on:
+
+  push:
+    branches: [ main, master, dev ]
+    paths:
+      - '**.py'
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+
+  Test:
+
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout package repository
+        uses: actions/checkout@v2
+
+      - name: Deploying miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          environment-file: environment.yaml
+          activate-environment: test
+
+      - name: Checkout CI/CD Toolkit
+        uses: actions/checkout@v2
+        with:
+          repository: breakthewall/cicd-toolkit
+          path: cicd-toolkit
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Adding test tools
+        run: conda env update -f cicd-toolkit/conda_envs/test.yaml
+
+      - name: Running tests
+        run: python -m pytest
