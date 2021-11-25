@@ -18,7 +18,8 @@ from .OptDes import (
     evaldes,
     doeRequest,
     getDoe,
-    mainDoe
+    mainDoe,
+    read_excel
 )
 
 from .synbioParts import (
