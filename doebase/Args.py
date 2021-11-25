@@ -88,7 +88,7 @@ def add_arguments(parser: ArgumentParser) -> ArgumentParser:
         '--codon_table',
         type=str,
         default=DEFAULT_condon_table,
-        help=f'(default: {DEFAULT_condon_table})'
+        help=f'Codon Usage Table (default: {DEFAULT_condon_table}). See "https://www.ebi.ac.uk/seqdb/confluence/display/JDSAT/EMBOSS+backtranseq+Help+and+Documentation#EMBOSSbacktranseqHelpandDocumentation-WebServices" for more codons'
     )
     parser.add_argument(
         '--version',
