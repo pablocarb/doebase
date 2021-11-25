@@ -2,6 +2,7 @@ from os import getcwd, path
 from argparse  import ArgumentParser
 from ._version import __version__
 
+
 DEFAULT_libsize = 32
 DEFAULT_get_sequences = True
 DEFAULT_backtranslate = True
