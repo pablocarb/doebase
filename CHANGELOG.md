@@ -1,8 +1,17 @@
 # Changelog
 
+## [v1.0.0](https://github.com/pablocarb/doebase/tree/v1.0.0) (2021-11-26)
+
+[Full Changelog](https://github.com/pablocarb/doebase/compare/0.0.1...v1.0.0)
+
 ## [0.0.1](https://github.com/pablocarb/doebase/tree/0.0.1) (2021-11-25)
 
 [Full Changelog](https://github.com/pablocarb/doebase/compare/v1.2...0.0.1)
+
+**Merged pull requests:**
+
+- trigger [\#3](https://github.com/pablocarb/doebase/pull/3) ([breakthewall](https://github.com/breakthewall))
+- Refactor for library, CLI, conda [\#2](https://github.com/pablocarb/doebase/pull/2) ([breakthewall](https://github.com/breakthewall))
 
 ## [v1.2](https://github.com/pablocarb/doebase/tree/v1.2) (2020-02-12)
 
