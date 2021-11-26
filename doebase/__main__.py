@@ -22,5 +22,6 @@ def entry_point():
         )
         open(args.outfile, 'w').write(diagnostics['sbol'])
 
+
 if __name__ == '__main__':
     entry_point()
