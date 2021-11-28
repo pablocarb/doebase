@@ -1,8 +1,16 @@
 # Changelog
 
+## [v2.0.0](https://github.com/pablocarb/doebase/tree/v2.0.0) (2021-11-28)
+
+[Full Changelog](https://github.com/pablocarb/doebase/compare/v1.0.0...v2.0.0)
+
 ## [v1.0.0](https://github.com/pablocarb/doebase/tree/v1.0.0) (2021-11-26)
 
 [Full Changelog](https://github.com/pablocarb/doebase/compare/0.0.1...v1.0.0)
+
+**Merged pull requests:**
+
+- Reach the right version number [\#4](https://github.com/pablocarb/doebase/pull/4) ([breakthewall](https://github.com/breakthewall))
 
 ## [0.0.1](https://github.com/pablocarb/doebase/tree/0.0.1) (2021-11-25)
 
