@@ -26,12 +26,12 @@ class Test_synbioParts(TestCase):
     input_sbol = os_path.join(
         folder,
         'input',
-        'lycopene.sbol'
+        'lycopene.xml'
     )
     output = os_path.join(
         folder,
         'output',
-        'out.sbol'
+        'lycopene.xml'
     )
                
     def test_doeGetSBOL(self):
