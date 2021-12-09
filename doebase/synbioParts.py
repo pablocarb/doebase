@@ -34,6 +34,7 @@ from .Args import (
     DEFAULT_condon_table,
 )
 
+
 def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.sbol'):
     """
     Perform the DoE and generate the SBOL file from the 
