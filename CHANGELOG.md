@@ -1,5 +1,9 @@
 # Changelog
 
+## [v1.0.1](https://github.com/brsynth/doebase/tree/v1.0.1) (2021-12-09)
+
+[Full Changelog](https://github.com/brsynth/doebase/compare/v1.0.0...v1.0.1)
+
 ## [v1.0.0](https://github.com/brsynth/doebase/tree/v1.0.0) (2021-12-09)
 
 [Full Changelog](https://github.com/brsynth/doebase/compare/0.0.1...v1.0.0)
