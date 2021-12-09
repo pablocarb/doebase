@@ -19,7 +19,6 @@ Created on Fri May 31 13:38:19 2019
         - UniProt identifier: a new empty container for this part is created in SynBioHub, 
         which will be later filled by the DNA design step
 """
-
 import os
 import re
 import sbml2sbol.sbol as sbol
