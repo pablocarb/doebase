@@ -22,7 +22,7 @@ Created on Fri May 31 13:38:19 2019
 
 import os
 import re
-import doebase.sbol as sbol
+import sbml2sbol.sbol as sbol
 import requests
 import time
 import numpy as np

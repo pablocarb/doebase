@@ -8,3 +8,4 @@ dependencies:
   - scipy
   - requests
   - scikit-learn
+  - sbml2sbol
