@@ -19,10 +19,9 @@ Created on Fri May 31 13:38:19 2019
         - UniProt identifier: a new empty container for this part is created in SynBioHub, 
         which will be later filled by the DNA design step
 """
-
 import os
 import re
-import doebase.sbol as sbol
+import sbml2sbol.sbol as sbol
 import requests
 import time
 import numpy as np
@@ -34,6 +33,7 @@ from .Args import (
     DEFAULT_backtranslate,
     DEFAULT_condon_table,
 )
+
 
 def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.sbol'):
     """
