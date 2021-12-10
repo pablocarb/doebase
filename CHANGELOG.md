@@ -1,41 +1,32 @@
 # Changelog
 
-## [v2.0.0](https://github.com/pablocarb/doebase/tree/v2.0.0) (2021-11-28)
+## [v1.0.1](https://github.com/brsynth/doebase/tree/v1.0.1) (2021-12-09)
 
-[Full Changelog](https://github.com/pablocarb/doebase/compare/v1.0.0...v2.0.0)
+[Full Changelog](https://github.com/brsynth/doebase/compare/v1.0.0...v1.0.1)
 
-## [v1.0.0](https://github.com/pablocarb/doebase/tree/v1.0.0) (2021-11-26)
+## [v1.0.0](https://github.com/brsynth/doebase/tree/v1.0.0) (2021-12-09)
 
-[Full Changelog](https://github.com/pablocarb/doebase/compare/0.0.1...v1.0.0)
+[Full Changelog](https://github.com/brsynth/doebase/compare/0.0.1...v1.0.0)
 
-**Merged pull requests:**
+## [0.0.1](https://github.com/brsynth/doebase/tree/0.0.1) (2021-11-25)
 
-- Reach the right version number [\#4](https://github.com/pablocarb/doebase/pull/4) ([breakthewall](https://github.com/breakthewall))
+[Full Changelog](https://github.com/brsynth/doebase/compare/v1.2...0.0.1)
 
-## [0.0.1](https://github.com/pablocarb/doebase/tree/0.0.1) (2021-11-25)
+## [v1.2](https://github.com/brsynth/doebase/tree/v1.2) (2020-02-12)
 
-[Full Changelog](https://github.com/pablocarb/doebase/compare/v1.2...0.0.1)
+[Full Changelog](https://github.com/brsynth/doebase/compare/v1.1...v1.2)
 
-**Merged pull requests:**
+## [v1.1](https://github.com/brsynth/doebase/tree/v1.1) (2020-02-07)
 
-- trigger [\#3](https://github.com/pablocarb/doebase/pull/3) ([breakthewall](https://github.com/breakthewall))
-- Refactor for library, CLI, conda [\#2](https://github.com/pablocarb/doebase/pull/2) ([breakthewall](https://github.com/breakthewall))
+[Full Changelog](https://github.com/brsynth/doebase/compare/v0.9...v1.1)
 
-## [v1.2](https://github.com/pablocarb/doebase/tree/v1.2) (2020-02-12)
+## [v0.9](https://github.com/brsynth/doebase/tree/v0.9) (2020-01-06)
 
-[Full Changelog](https://github.com/pablocarb/doebase/compare/v1.1...v1.2)
+[Full Changelog](https://github.com/brsynth/doebase/compare/v1.0...v0.9)
 
-## [v1.1](https://github.com/pablocarb/doebase/tree/v1.1) (2020-02-07)
+## [v1.0](https://github.com/brsynth/doebase/tree/v1.0) (2020-01-06)
 
-[Full Changelog](https://github.com/pablocarb/doebase/compare/v0.9...v1.1)
-
-## [v0.9](https://github.com/pablocarb/doebase/tree/v0.9) (2020-01-06)
-
-[Full Changelog](https://github.com/pablocarb/doebase/compare/v1.0...v0.9)
-
-## [v1.0](https://github.com/pablocarb/doebase/tree/v1.0) (2020-01-06)
-
-[Full Changelog](https://github.com/pablocarb/doebase/compare/085f5fe21bd1189280b414939c0348accb93eaf9...v1.0)
+[Full Changelog](https://github.com/brsynth/doebase/compare/085f5fe21bd1189280b414939c0348accb93eaf9...v1.0)
 
 
 
