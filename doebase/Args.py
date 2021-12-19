@@ -60,7 +60,7 @@ def add_arguments(parser: ArgumentParser) -> ArgumentParser:
         '--ref_parts_file',
         type=str,
         default=DEFAULT_parts_file,
-        help=f'Parts File (defualt: {DEFAULT_parts_file})'
+        help=f'Parts File (default: {DEFAULT_parts_file})'
     )
     parser.add_argument(
         '--sbol_file',
