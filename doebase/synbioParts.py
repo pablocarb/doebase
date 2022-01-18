@@ -21,7 +21,7 @@ Created on Fri May 31 13:38:19 2019
 """
 import os
 import re
-import sbml2sbol.sbol as sbol
+import sbol2 as sbol
 import requests
 import time
 import numpy as np
@@ -266,7 +266,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                             except:
                                 pass
                 gene.roles = sboldef[ptype]
-                gene.setPropertyValue('http://purl.org/dc/terms/description',part)
+                gene.description = part
                 gene.name = name
                 try:
                     doc.addComponentDefinition(gene)
