@@ -6,6 +6,8 @@ name: Tests
 on:
 
   push:
+    paths:
+      - '**.py'
   pull_request:
     branches: [ main, master ]
 
