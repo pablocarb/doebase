@@ -153,7 +153,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
         for com in locdoc.componentDefinitions:
             if com.name is None:
                 com.name = com.displayId
-        locdoc.copy('http://liverpool.ac.uk',doc)
+        locdoc.copy(target_doc=doc)
         
     for i in parts.index:
         name = parts.loc[i,'Name']
@@ -188,7 +188,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 else:
                     terminator = sbol.ComponentDefinition(name)                    
                 terminator.roles = sboldef[ptype]
-                terminator.setPropertyValue('http://purl.org/dc/terms/description',part)
+                terminator.description = part
                 try:
                     if part not in doc.componentDefinitions:
                         terminator = doc.getComponentDefinition(part)
@@ -204,7 +204,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 else:
                         origin = sbol.ComponentDefinition(name)                    
                 origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.description = part
                 origin.name = name
                 try:
                     if part not in doc.componentDefinitions:
