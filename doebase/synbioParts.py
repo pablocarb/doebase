@@ -153,7 +153,9 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
         for com in locdoc.componentDefinitions:
             if com.name is None:
                 com.name = com.displayId
-        locdoc.copy('http://liverpool.ac.uk',doc)
+        locdoc.copy(target_doc=doc)
+    # This is a dangerous assumption, and will cause incorrect behavior when the parts supplied are not in this homespace
+    sbol.setHomespace('http://liverpool.ac.uk/')
         
     for i in parts.index:
         name = parts.loc[i,'Name']
@@ -171,7 +173,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 else:
                     promoter = sbol.ComponentDefinition(name)                    
                 promoter.roles = sboldef[ptype]
-                promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
+                promoter.description = part
                 try:
                     if part not in doc.componentDefinitions:
                         promoter = doc.getComponentDefinition(part)
@@ -188,7 +190,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 else:
                     terminator = sbol.ComponentDefinition(name)                    
                 terminator.roles = sboldef[ptype]
-                terminator.setPropertyValue('http://purl.org/dc/terms/description',part)
+                terminator.description = part
                 try:
                     if part not in doc.componentDefinitions:
                         terminator = doc.getComponentDefinition(part)
@@ -204,7 +206,7 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
                 else:
                         origin = sbol.ComponentDefinition(name)                    
                 origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.description = part
                 origin.name = name
                 try:
                     if part not in doc.componentDefinitions:
@@ -300,7 +302,7 @@ def _definePartsOld(doc,parts):
             if ptype == 'promoter':
                 promoter = sbol.ComponentDefinition(name)
                 promoter.roles = sboldef[ptype]
-                promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
+                promoter.description = part
                 doc.addComponentDefinition(promoter)
                 try:
                     terminator = sbol.ComponentDefinition('Ter')
@@ -311,12 +313,12 @@ def _definePartsOld(doc,parts):
             elif ptype == 'origin':
                 origin = sbol.ComponentDefinition(name)
                 origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.description = part
                 doc.addComponentDefinition(origin)
             elif ptype == 'gene' or ptype == 'resistance':
                 origin = sbol.ComponentDefinition(name)
                 origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
+                origin.description = part
                 doc.addComponentDefinition(origin)
     return doc
 
