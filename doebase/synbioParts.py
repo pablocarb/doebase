@@ -33,6 +33,14 @@ from .Args import (
     DEFAULT_backtranslate,
     DEFAULT_condon_table,
 )
+from logging import (
+    Logger,
+    getLogger,
+    DEBUG
+)
+logger = getLogger(__name__)
+# logger.setLevel(DEBUG)
+
 
 
 def doeSBOL(pfile='RefParts.csv', gfile='GeneParts.csv', libsize=32, ofile='out.sbol'):
@@ -131,14 +139,22 @@ def _ReadParts(parts,registry='https://synbiohub.org'):
             repo.pull(part, doc)
     return doc
 
-def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eecoli.cut',registry='https://synbiohub.org',local=None):
+def _defineParts(
+    doc,
+    parts,
+    getSequences=True,
+    backtranslate=True,
+    codontable='Eecoli.cut',
+    registry='https://synbiohub.org',
+    local=None
+):
     """ Parts is a dataframe containing columns: Name, Type, Part is read 
     and each part in added to the SBOL doc.
     Part type should is overriden by the ontology definition in the registry.
     If sequences should be provided in the SBOL doc, check if they are on the parts table
     or select if backtranslate from UniProt and provide codon table:
     (Eecoli.cut, Eyeast.cut, etc) See https://www.ebi.ac.uk/Tools/st/emboss_backtranseq/ """
-    
+
     locdoc = None
     if local is not None:
         locdoc = sbol.Document()
@@ -147,131 +163,110 @@ def _defineParts(doc,parts,getSequences=True,backtranslate=True,codontable='Eeco
     sboldef = {'promoter': sbol.SO_PROMOTER, 'gene': sbol.SO_CDS, 
                'origin': 'http://identifiers.org/so/SO:0000296', 
                'resistance': sbol.SO_CDS, 'terminator': sbol.SO_TERMINATOR}
-    registry='https://synbiohub.org'
     repo = sbol.PartShop(registry)
     if locdoc is not None:
         for com in locdoc.componentDefinitions:
             if com.name is None:
                 com.name = com.displayId
-        locdoc.copy('http://liverpool.ac.uk',doc)
-        
+        locdoc.copy(target_doc=doc)
+        sbol.setHomespace('http://liverpool.ac.uk')
+
+    logger.debug(f'PARTS\n{parts}')
     for i in parts.index:
+
         name = parts.loc[i,'Name']
         ptype = parts.loc[i,'Type']
         part = parts.loc[i,'Part']
-        if ptype in sboldef:
-            if ptype == 'promoter':
-                if getSequences:
-                    try:
-                        repo.pull(part,doc)
-                        promoter = doc.getComponentDefinition(part)
-                        promoter.name = name
-                    except:
-                        promoter = sbol.ComponentDefinition(name)
-                else:
-                    promoter = sbol.ComponentDefinition(name)                    
-                promoter.roles = sboldef[ptype]
-                promoter.setPropertyValue('http://purl.org/dc/terms/description',part)
+
+        logger.debug(f'Processing {i}, {name}, {part}')
+        if ptype in ['promoter', 'origin', 'terminator']:
+            if getSequences:
                 try:
-                    if part not in doc.componentDefinitions:
-                        promoter = doc.getComponentDefinition(part)
-                except:
-                    doc.addComponentDefinition(promoter)
-            elif ptype == 'terminator':
-                if getSequences:
-                    try:
-                        repo.pull(part,doc)
-                        terminator = doc.getComponentDefinition(part)
-                        terminator.name = name
-                    except:
-                        terminator = sbol.ComponentDefinition(name)
-                else:
-                    terminator = sbol.ComponentDefinition(name)                    
-                terminator.roles = sboldef[ptype]
-                terminator.setPropertyValue('http://purl.org/dc/terms/description',part)
+                    logger.debug(f'Pulling {part}...')
+                    repo.pull(part, doc)
+                    _part = doc.getComponentDefinition(part)
+                    _part.name = name
+                except Exception as e:
+                    logger.debug(e)
+                    logger.debug(f'{ptype}, {name}')
+                    _part = sbol.ComponentDefinition(name)
+            else:
+                _part = sbol.ComponentDefinition(name)                    
+            _part.roles = sboldef[ptype]
+            _part.description = part
+
+        elif ptype in ['gene', 'resistance']:
+            gene = None
+
+            # Case 1: where the gene is defined in the sbol 
+            if name in doc.componentDefinitions:
+                logger.debug(f'{ptype} {name} is defined in SBOL doc')
+                gene = doc.componentDefinitions[name]
+                continue
+
+            # Case 2: where the gene is in the repo
+            if gene is None:
+                logger.debug(f'Look for {ptype} {name} in the repo {part}')
                 try:
-                    if part not in doc.componentDefinitions:
-                        terminator = doc.getComponentDefinition(part)
-                except:
-                    doc.addComponentDefinition(terminator)
-            elif ptype == 'origin':
-                if getSequences:
-                    try:
-                        repo.pull(part,doc)
-                        origin = doc.getComponentDefinition(part)
-                    except:
-                        origin = sbol.ComponentDefinition(name)
-                else:
-                        origin = sbol.ComponentDefinition(name)                    
-                origin.roles = sboldef[ptype]
-                origin.setPropertyValue('http://purl.org/dc/terms/description',part)
-                origin.name = name
-                try:
-                    if part not in doc.componentDefinitions:
-                        origin = doc.getComponentDefinition(part)
-                except:
-                    doc.addComponentDefinition(origin)
-            elif ptype == 'gene' or ptype == 'resistance':
-                gene = None
-                # Case 1: where the gene is defined in the sbol 
-                if name in doc.componentDefinitions:
-                    gene = doc.componentDefinitions[name]
-                try:
-#                    gene = locdoc.getComponentDefinition(part)
-                    gene = doc.componentDefinitions[name]
-                except:
-                    gene = None
-                if gene is None:
-                # Case 2: where the gene is in the repo
-                    try:
-                        repo.pull(part,doc)
-                        gene = doc.getComponentDefinition(part)
-                    except:
-                        pass
-                # Case 3: where the sequence is retrieved manually    
-                if gene is None: 
-                    gene = sbol.ComponentDefinition(name)
-                    if getSequences:
-                        # Get from the Sequence column if given (assume naseq)
-                        if 'Sequence' in parts and not pd.isnan( parts.loc[i,'Sequence'] ):
-                            seq = parts.loc[i,'Sequence']
-                            seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
-                            gene.sequence = seqdef
-                        else:
-                            try:
-                                query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
-                                response = requests.get(query)
-                                if backtranslate:
-                                    resp = requests.post( 'https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/run', 
-                                                         {'email': '@'.join(['pablo.carbonell','manchester.ac.uk']), 'title':'OptBioDes SBOL', 
-                                                          'codontable': codontable, 'sequence': response.text} )
-                                    jobid = resp.text
-                                    status = 'RUNNING'
-                                    while status == 'RUNNING':
-                                        resp1  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/status/'+jobid)
-                                        status = resp1.text
-                                        time.sleep(0.1)
-                                    if status == 'FINISHED':
-                                        resp2  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/result/'+jobid+'/out')
-                                        seq = ''.join( resp2.text.split('\n')[1:] )
-                                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
-                                    else:
-                                        seq = ''.join( response.text.split('\n')[1:] )                                   
-                                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
-                                else:
-                                    seq = ''.join( response.text.split('\n')[1:] )
-                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
-                                gene.sequence = seqdef
-                            # If UniProt/EMBOSS was not succesful, leave the sequence empty
-                            except:
-                                pass
-                gene.roles = sboldef[ptype]
-                gene.description = part
-                gene.name = name
-                try:
-                    doc.addComponentDefinition(gene)
-                except:
+                    repo.pull(part, doc)
+                    gene = doc.getComponentDefinition(part)
+                    continue
+                except sbol.sbolerror.SBOLError as e:
+                    logger.debug(f'{ptype} {name} not found in the repo {part}')
                     pass
+
+            # Case 3: where the sequence is retrieved manually    
+            if gene is None: 
+                logger.debug(f'{ptype} {name} has to be retrieved manually')
+                gene = sbol.ComponentDefinition(name)
+                if getSequences:
+                    # Get from the Sequence column if given (assume naseq)
+                    if 'Sequence' in parts and not pd.isnan( parts.loc[i,'Sequence'] ):
+                        logger.debug(f'Get from the Sequence column')
+                        seq = parts.loc[i,'Sequence']
+                        seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
+                        gene.sequence = seqdef
+                    else:
+                        try:
+                            query = 'https://www.uniprot.org/uniprot/' + name + '.fasta'
+                            logger.debug(f'Retrieve from {query}')
+                            response = requests.get(query)
+                            if backtranslate:
+                                resp = requests.post( 'https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/run', 
+                                                        {'email': '@'.join(['pablo.carbonell','manchester.ac.uk']), 'title':'OptBioDes SBOL', 
+                                                        'codontable': codontable, 'sequence': response.text} )
+                                jobid = resp.text
+                                status = 'RUNNING'
+                                while status == 'RUNNING':
+                                    resp1  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/status/'+jobid)
+                                    status = resp1.text
+                                    time.sleep(0.1)
+                                if status == 'FINISHED':
+                                    resp2  = requests.get('https://www.ebi.ac.uk/Tools/services/rest/emboss_backtranseq/result/'+jobid+'/out')
+                                    seq = ''.join( resp2.text.split('\n')[1:] )
+                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iubmb/misc/naseq.html' )
+                                else:
+                                    seq = ''.join( response.text.split('\n')[1:] )                                   
+                                    seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                            else:
+                                seq = ''.join( response.text.split('\n')[1:] )
+                                seqdef = sbol.Sequence( name, seq, 'https://www.qmul.ac.uk/sbcs/iupac/AminoAcid/' )
+                            gene.sequence = seqdef
+                        # If UniProt/EMBOSS was not succesful, leave the sequence empty
+                        except Exception as e:
+                            logger.debug(f'Failed to retrieve from UniProt')
+                            logger.debug(e)
+                            pass
+
+            gene.roles = sboldef[ptype]
+            gene.description = part
+            gene.name = name
+            try:
+                doc.addComponentDefinition(gene)
+            except Exception as exception:
+                logger.debug(f'{type(exception).__name__} ** Failed to add {ptype}: {name}')
+                pass
+
     return doc
 
 def _definePartsSBOL(doc,parts,roles):
@@ -364,10 +359,21 @@ def getSBOL(parts,genes,cons,getSequences=True,backtranslate=True,codontable='Ee
     namespace = "http://synbiochem.co.uk"
     sbol.setHomespace( namespace )
     doc = sbol.Document()
+    print('Defining parts... ', end='')
     doc = _defineParts(doc, parts)
-    print('Parts defined')
-    doc = _defineParts( doc, genes, getSequences, backtranslate, codontable, local=local )
-    print('Genes defined')
+    print('OK', end='\n')
+    logger.debug(f'SBOL document\n{doc}')
+    print('Defining genes... ', end='')
+    doc = _defineParts(
+        doc=doc,
+        parts=genes,
+        getSequences=getSequences,
+        backtranslate=backtranslate,
+        codontable=codontable,
+        local=local
+    )
+    print('OK', end='\n')
+    logger.debug(f'SBOL document\n{doc}')
     for row in np.arange(0,cons.shape[0]):
         plasmid = []
         for col in np.arange(0,cons.shape[1]):

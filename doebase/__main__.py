@@ -1,4 +1,3 @@
-from logging import Logger
 from .Args import build_args_parser
 from .synbioParts import doeGetSBOL
 
