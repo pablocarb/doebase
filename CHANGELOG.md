@@ -1,8 +1,20 @@
 # Changelog
 
+## [v2.0.2](https://github.com/pablocarb/doebase/tree/v2.0.2) (2022-01-24)
+
+[Full Changelog](https://github.com/pablocarb/doebase/compare/v2.0.1...v2.0.2)
+
+**Closed issues:**
+
+- Different results on Linux and macOS [\#8](https://github.com/pablocarb/doebase/issues/8)
+
 ## [v2.0.1](https://github.com/pablocarb/doebase/tree/v2.0.1) (2021-12-10)
 
 [Full Changelog](https://github.com/pablocarb/doebase/compare/v2.0.0...v2.0.1)
+
+**Merged pull requests:**
+
+- TAG creation [\#7](https://github.com/pablocarb/doebase/pull/7) ([breakthewall](https://github.com/breakthewall))
 
 ## [v2.0.0](https://github.com/pablocarb/doebase/tree/v2.0.0) (2021-11-28)
 
