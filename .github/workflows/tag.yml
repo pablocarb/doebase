@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Loading recipe
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: recipe
           path: cicd-toolkit/recipe
@@ -72,7 +72,7 @@ jobs:
           environment-file: cicd-toolkit/conda_envs/build.yaml
           activate-environment: test
       - name: Loading conda_channels
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: conda_channels
           path: cicd-toolkit/recipe
